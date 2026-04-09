@@ -7,7 +7,7 @@ interface ForkOpts {
   slot?: string;
 }
 
-export async function forkCommand(network: string, opts: ForkOpts) {
+export async function forkCommand(network: string, programId: string, opts: ForkOpts) {
   const validNetworks = ['devnet', 'mainnet'];
   if (!validNetworks.includes(network)) {
     console.error(`Invalid network: ${network}. Use devnet or mainnet.`);
@@ -19,14 +19,7 @@ export async function forkCommand(network: string, opts: ForkOpts) {
     : process.env.DEVNET_RPC_URL || 'https://api.devnet.solana.com';
 
   const slot = opts.slot ? parseInt(opts.slot, 10) : undefined;
-  console.log(`Forking ${network}${slot ? ` at slot ${slot}` : ' (latest)'}...`);
-
-  // for now, fork requires a programId — use env or default
-  const programId = process.env.PROGRAM_ID;
-  if (!programId) {
-    console.error('Set PROGRAM_ID env var to fork a specific program');
-    process.exit(1);
-  }
+  console.log(`Forking ${programId} on ${network}${slot ? ` at slot ${slot}` : ' (latest)'}...`);
 
   try {
     const result = await forkState(programId, rpcUrl, slot);

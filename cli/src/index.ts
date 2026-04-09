@@ -24,7 +24,7 @@ cli
   });
 
 cli
-  .command('fork <network>')
+  .command('fork <network> <programId>')
   .option('-s, --slot <slot>', 'fork at specific slot')
   .description('fork devnet/mainnet state for local testing')
   .action(forkCommand);

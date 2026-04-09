@@ -27,7 +27,7 @@ export async function forkState(
     method: 'getProgramAccounts',
     params: [
       programId,
-      { encoding: 'base64', dataSlice: { offset: 0, length: 0 } },
+      { encoding: 'base64' },
     ],
   }
 

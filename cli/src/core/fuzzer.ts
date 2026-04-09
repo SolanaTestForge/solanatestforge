@@ -83,11 +83,12 @@ export function simulateFuzz(
 ): FuzzResult {
   const inputs = generateFuzzInputs(instructions, iterations)
   const findings: FuzzFinding[] = []
-  let crashes = 0
+  let crashedIterations = 0
   let timeouts = 0
 
   for (let i = 0; i < inputs.length; i++) {
     const input = inputs[i]
+    let iterCrashed = false
 
     // simulate: boundary values often cause issues
     for (const [key, val] of Object.entries(input.args)) {
@@ -106,7 +107,7 @@ export function simulateFuzz(
           input: JSON.stringify(input),
           message: `Max value for "${key}" in ${input.instruction} — check overflow`,
         })
-        crashes++
+        iterCrashed = true
       }
       if (val === -1) {
         findings.push({
@@ -115,16 +116,18 @@ export function simulateFuzz(
           input: JSON.stringify(input),
           message: `Negative value for "${key}" in ${input.instruction} — check underflow`,
         })
-        crashes++
+        iterCrashed = true
       }
     }
+
+    if (iterCrashed) crashedIterations++
   }
 
   return {
     iterations,
-    crashes,
+    crashes: crashedIterations,
     timeouts,
-    passed: iterations - crashes - timeouts,
+    passed: iterations - crashedIterations - timeouts,
     findings: findings.slice(0, 50), // cap at 50 findings
   }
 }

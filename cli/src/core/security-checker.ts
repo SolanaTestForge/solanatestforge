@@ -78,8 +78,9 @@ export function runSecurityChecks(idl: AnchorIdl): SecurityIssue[] {
     }
 
     // 5. cpi-authority: CPI calls without proper program checks
+    const KNOWN_PROGRAMS = ['systemProgram', 'system_program', 'tokenProgram', 'token_program', 'associatedTokenProgram', 'rent']
     const hasCpiProgram = ix.accounts.some(
-      (a) => a.name.includes('program') && a.name !== 'systemProgram' && a.name !== 'system_program'
+      (a) => a.name.includes('program') && !KNOWN_PROGRAMS.includes(a.name)
     )
     if (hasCpiProgram) {
       issues.push({
@@ -93,7 +94,7 @@ export function runSecurityChecks(idl: AnchorIdl): SecurityIssue[] {
 
   // 6. arithmetic-overflow: global check for error codes
   const hasOverflowError = idl.errors?.some(
-    (e) => e.name.toLowerCase().includes('overflow') || e.msg.toLowerCase().includes('overflow')
+    (e) => e.name.toLowerCase().includes('overflow') || (e.msg && e.msg.toLowerCase().includes('overflow'))
   )
   if (!hasOverflowError) {
     issues.push({
