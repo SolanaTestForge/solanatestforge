@@ -7,6 +7,7 @@ import { Command } from 'commander';
 import { forkCommand } from './commands/fork';
 import { testCommand } from './commands/test';
 import { securityCommand } from './commands/security';
+import { fuzzCommand } from './commands/fuzz';
 
 const cli = new Command();
 
@@ -36,15 +37,13 @@ cli
 
 cli
   .command('security <programId>')
-  .description('run security checks against a program')
+  .description('run security checks against a program IDL')
   .action(securityCommand);
 
 cli
   .command('fuzz <programId>')
   .option('-n, --iterations <n>', 'number of fuzz iterations', '1000')
   .description('fuzz test a program with random inputs')
-  .action(() => {
-    console.log('solforge fuzz — fuzzer coming soon');
-  });
+  .action(fuzzCommand);
 
 cli.parse();
