@@ -3,10 +3,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import chalk from 'chalk';
 import { runSecurityChecks, formatReport } from '../core/security-checker';
+import { spinner } from '../core/output';
 
 export async function securityCommand(programId: string) {
-  console.log(`Running security checks on ${programId}...\n`);
+  const spin = spinner(`Running security checks on ${programId}`);
 
   // try to find IDL in common locations
   const idlPaths = [
@@ -31,27 +33,26 @@ export async function securityCommand(programId: string) {
   }
 
   if (!idl) {
-    console.log('No IDL found. Provide path to IDL JSON or run from Anchor project root.');
-    console.log(`Searched: ${idlPaths.join(', ')}`);
-    console.log('\nUsage: solforge security <path-to-idl.json>');
-    console.log('       solforge security <program-name>  (from anchor project)');
+    spin.fail('No IDL found');
+    console.log(chalk.gray(`Searched: ${idlPaths.join(', ')}`));
+    console.log(`\nUsage: ${chalk.bold('solforge security <path-to-idl.json>')}`);
+    console.log(`       ${chalk.bold('solforge security <program-name>')}  (from anchor project)`);
     return;
   }
 
-  console.log(`IDL loaded: ${idlPath}`);
-  console.log(`Program: ${idl.name || programId}`);
-  console.log(`Instructions: ${idl.instructions?.length || 0}`);
+  spin.succeed(`IDL loaded: ${idlPath}`);
+  console.log(chalk.gray(`  Program: ${idl.name || programId} | Instructions: ${idl.instructions?.length || 0}`));
 
   const issues = runSecurityChecks(idl);
   const report = formatReport(issues, idl.name || programId);
   console.log(report);
 
   if (issues.length === 0) {
-    console.log('\nNo issues found — program looks clean!');
+    console.log(chalk.green.bold('\n  All clear — no security issues detected!'));
   } else {
-    const critCount = issues.filter((i) => i.severity === 'critical').length;
+    const critCount = issues.filter((i: any) => i.severity === 'critical').length;
     if (critCount > 0) {
-      console.log(`\n${critCount} CRITICAL issue(s) require immediate attention.`);
+      console.log(chalk.red.bold(`\n  ${critCount} CRITICAL issue(s) require immediate attention.`));
     }
   }
 }

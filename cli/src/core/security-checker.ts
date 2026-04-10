@@ -120,26 +120,56 @@ export function runSecurityChecks(idl: AnchorIdl): SecurityIssue[] {
 }
 
 export function formatReport(issues: SecurityIssue[], programName: string): string {
-  const lines: string[] = [
-    `\nSecurity Report: ${programName}`,
-    '═'.repeat(60),
-    `Total issues: ${issues.length}`,
-    `  Critical: ${issues.filter((i) => i.severity === 'critical').length}`,
-    `  High:     ${issues.filter((i) => i.severity === 'high').length}`,
-    `  Medium:   ${issues.filter((i) => i.severity === 'medium').length}`,
-    `  Low:      ${issues.filter((i) => i.severity === 'low').length}`,
-    '─'.repeat(60),
-  ]
+  const chalk = require('chalk')
+  const { severityBadge, header, divider, resultTable, summary } = require('./output')
 
+  const lines: string[] = [header(`Security Report: ${programName}`)]
+
+  const critCount = issues.filter((i) => i.severity === 'critical').length
+  const highCount = issues.filter((i) => i.severity === 'high').length
+  const medCount = issues.filter((i) => i.severity === 'medium').length
+  const lowCount = issues.filter((i) => i.severity === 'low').length
+
+  lines.push('')
+  lines.push(`  ${chalk.red.bold(critCount)} critical  ${chalk.red(highCount)} high  ${chalk.yellow(medCount)} medium  ${chalk.cyan(lowCount)} low`)
+  lines.push(divider())
+
+  // issue details with colored severity badges
   for (const issue of issues) {
-    const sev = issue.severity.toUpperCase().padEnd(8)
-    lines.push(`[${sev}] ${issue.rule}`)
+    const badge = severityBadge(issue.severity)
+    lines.push(`\n  ${badge} ${chalk.bold(issue.rule)}`)
     lines.push(`  ${issue.message}`)
-    if (issue.instruction) lines.push(`  instruction: ${issue.instruction}`)
-    if (issue.account) lines.push(`  account: ${issue.account}`)
-    lines.push('')
+    if (issue.instruction) lines.push(`  ${chalk.gray('instruction:')} ${issue.instruction}`)
+    if (issue.account) lines.push(`  ${chalk.gray('account:')} ${issue.account}`)
   }
 
-  lines.push('═'.repeat(60))
+  // pass/fail summary table
+  const checkNames = [
+    'missing-signer', 'unchecked-owner', 'arithmetic-overflow',
+    'reinitialization', 'cpi-authority', 'rent-exemption',
+  ]
+
+  lines.push('')
+  lines.push(divider())
+  lines.push(chalk.bold('  Check Summary'))
+  lines.push('')
+
+  const rows = checkNames.map((name) => {
+    const found = issues.filter((i) => i.rule === name)
+    if (found.length === 0) {
+      return { label: name, status: 'pass' as const }
+    }
+    const worst = found.some((f) => f.severity === 'critical') ? 'fail' as const : 'warn' as const
+    return { label: name, status: worst, detail: `${found.length} issue(s)` }
+  })
+
+  lines.push(resultTable(rows))
+
+  const passed = rows.filter((r) => r.status === 'pass').length
+  const failed = rows.filter((r) => r.status === 'fail').length
+  const warnings = rows.filter((r) => r.status === 'warn').length
+  lines.push('')
+  lines.push(summary(rows.length, passed, failed, warnings))
+
   return lines.join('\n')
 }
