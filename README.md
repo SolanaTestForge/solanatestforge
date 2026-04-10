@@ -7,14 +7,20 @@ Advanced test framework for Solana programs with forked state, security checks, 
 ```bash
 npm install -g solana-test-forge
 
-# Run tests with security checks
-solforge test ./programs/my-program
+# Run tests on forked state
+solforge test --file tests/my-test.ts
 
-# Fork devnet state
-solforge fork --network devnet --program <PROGRAM_ID>
+# Fork devnet state for a program
+solforge fork devnet <PROGRAM_ID>
+
+# Fork at specific slot (mainnet)
+solforge fork mainnet <PROGRAM_ID> --slot 280000000
+
+# Run security checks against an IDL
+solforge security <PROGRAM_ID_OR_IDL_PATH>
 
 # Run fuzzer
-solforge fuzz ./programs/my-program --iterations 10000
+solforge fuzz <PROGRAM_ID_OR_IDL_PATH> --iterations 10000
 ```
 
 ## Supported Checks

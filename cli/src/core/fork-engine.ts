@@ -6,6 +6,7 @@ export interface AccountSnapshot {
   lamports: number
   dataLen: number
   owner: string
+  data: string
 }
 
 export interface ForkResult {
@@ -21,6 +22,10 @@ export async function forkState(
   rpcUrl: string,
   targetSlot?: number
 ): Promise<ForkResult> {
+  if (targetSlot !== undefined) {
+    console.warn('[fork] historical forking not yet supported, using latest slot')
+  }
+
   const body: Record<string, unknown> = {
     jsonrpc: '2.0',
     id: 1,
@@ -48,6 +53,7 @@ export async function forkState(
     lamports: acc.account.lamports,
     dataLen: acc.account.data[0] ? Buffer.from(acc.account.data[0], 'base64').length : 0,
     owner: acc.account.owner,
+    data: acc.account.data[0] || '',
   }))
 
   // get current slot
