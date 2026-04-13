@@ -1,0 +1,23 @@
+{
+  "name": "solanatestforge",
+  "version": "0.1.0",
+  "description": "Test framework with forked state and security checks for Solana",
+  "bin": {
+    "solforge": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  }
+}
