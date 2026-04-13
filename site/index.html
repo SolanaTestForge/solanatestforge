@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SolanaTestForge — Security Scanner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0e17;
+      --panel: #111827;
+      --border: #1e2a3a;
+      --green: #00ff41;
+      --green-dim: #00cc33;
+      --red: #ff4757;
+      --yellow: #ffa502;
+      --cyan: #00d2ff;
+      --text: #c9d1d9;
+      --text-dim: #6b7280;
+      --accent: #00ff41;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .mono { font-family: 'Source Code Pro', monospace; }
+
+    /* Scan line animation */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      opacity: 0.08;
+      animation: scanline 8s linear infinite;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Grid background */
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* Header */
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+      background: rgba(10, 14, 23, 0.9);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      font-family: 'Source Code Pro', monospace;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--green);
+      letter-spacing: 1px;
+    }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(0, 255, 65, 0.1);
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 65, 0.2);
+      font-family: 'Source Code Pro', monospace;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .header-link {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .header-link:hover { color: var(--green); }
+
+    .install-btn {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 11px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--green);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .install-btn:hover {
+      border-color: var(--green);
+      background: rgba(0, 255, 65, 0.05);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 40px;
+      position: relative;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--text-dim);
+      max-width: 500px;
+      margin: 0 auto 32px;
+    }
+
+    .hero-cmd {
+      display: inline-block;
+      font-family: 'Source Code Pro', monospace;
+      font-size: 13px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: var(--green);
+    }
+
+    .hero-cmd .prompt { color: var(--text-dim); }
+    .hero-cmd:hover #iconCopy { opacity: 0.9 !important; }
+    .hero-cmd:hover { border-color: var(--green); }
+
+    @keyframes checkPop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .check-anim { animation: checkPop 0.35s ease-out forwards; }
+
+    /* Stats bar */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      padding: 24px;
+      margin: 0 auto;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Capabilities */
+    .capabilities {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .cap-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s;
+    }
+
+    .cap-card:hover {
+      border-color: rgba(0, 255, 65, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .cap-icon {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .cap-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .cap-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* Scanner section */
+    .scanner-section {
+      max-width: 900px;
+      margin: 60px auto;
+      padding: 0 24px;
+    }
+
+    .scanner-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .scanner-title .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Target bar */
+    .target-bar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .target-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .target-value {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 13px;
+      color: var(--cyan);
+      flex: 1;
+    }
+
+    .scan-btn {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 11px;
+      padding: 6px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--green);
+      background: rgba(0, 255, 65, 0.1);
+      color: var(--green);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .scan-btn:hover {
+      background: rgba(0, 255, 65, 0.2);
+    }
+
+    .scan-btn.active {
+      background: var(--green);
+      color: var(--bg);
+    }
+
+    /* Results panels */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .result-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .result-panel.active {
+      border-color: rgba(0, 255, 65, 0.3);
+    }
+
+    .result-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .result-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .result-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .result-status {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Source Code Pro', monospace;
+    }
+
+    .result-status.pass { background: rgba(0, 255, 65, 0.15); color: var(--green); }
+    .result-status.warn { background: rgba(255, 165, 2, 0.15); color: var(--yellow); }
+    .result-status.fail { background: rgba(255, 71, 87, 0.15); color: var(--red); }
+    .result-status.idle { background: rgba(107, 114, 128, 0.15); color: var(--text-dim); }
+
+    .result-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: white;
+    }
+
+    .result-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'Source Code Pro', monospace;
+    }
+
+    .result-chevron {
+      color: var(--text-dim);
+      transition: transform 0.3s;
+      font-size: 12px;
+    }
+
+    .result-panel.active .result-chevron {
+      transform: rotate(90deg);
+    }
+
+    .result-body {
+      display: none;
+      border-top: 1px solid var(--border);
+    }
+
+    .result-panel.active .result-body {
+      display: block;
+    }
+
+    .terminal {
+      padding: 16px;
+      font-family: 'Source Code Pro', monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      background: #0d1117;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .terminal .cmd { color: var(--cyan); }
+    .terminal .g { color: var(--green); }
+    .terminal .r { color: var(--red); }
+    .terminal .y { color: var(--yellow); }
+    .terminal .d { color: var(--text-dim); }
+    .terminal .w { color: white; font-weight: 600; }
+    .terminal .bg-g { background: rgba(0, 255, 65, 0.2); color: var(--green); padding: 1px 6px; border-radius: 3px; }
+    .terminal .bg-r { background: rgba(255, 71, 87, 0.2); color: var(--red); padding: 1px 6px; border-radius: 3px; }
+    .terminal .bg-y { background: rgba(255, 165, 2, 0.2); color: var(--yellow); padding: 1px 6px; border-radius: 3px; }
+
+    /* Typing cursor */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 14px;
+      background: var(--green);
+      animation: blink 1s infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+
+    /* Progress bar */
+    .progress-container {
+      margin: 12px 16px;
+      display: none;
+    }
+
+    .progress-container.visible { display: block; }
+
+    .progress-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 2px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    .progress-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: 'Source Code Pro', monospace;
+      margin-top: 6px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 60px 24px 40px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .footer a { color: var(--green); text-decoration: none; }
+
+    /* Quick start */
+    .quickstart {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .qs-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: white;
+    }
+
+    .qs-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Source Code Pro', monospace;
+      font-size: 12px;
+      line-height: 2;
+    }
+
+    .qs-block .comment { color: var(--text-dim); }
+    .qs-block .cmd { color: var(--green); }
+
+    @media (max-width: 768px) {
+      .capabilities { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 32px; }
+      .stats { gap: 24px; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="scanline"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <span class="logo">SOLANA_TEST_FORGE</span>
+      <span class="status-badge">v0.1.0</span>
+    </div>
+    <div class="header-right">
+      <a href="#demo" class="header-link">Live Demo</a>
+      <a href="#quickstart" class="header-link">Quick Start</a>
+      <button class="install-btn" onclick="navigator.clipboard.writeText('npx solanatestforge')">npm i solanatestforge</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>SolanaTestForge</h1>
+    <p>Fork devnet state. Scan for vulnerabilities. Fuzz with random inputs. Ship secure Solana programs.</p>
+    <div class="hero-cmd" id="heroCmdBox" style="cursor:pointer;display:inline-flex;align-items:center;gap:14px" onclick="copyHeroCmd()">
+      <span><span class="prompt">$ </span>solforge security ./target/idl/my_program.json</span>
+      <span class="hero-cmd-icon" id="heroCmdIcon">
+        <svg id="iconCopy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.35;transition:all 0.2s">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <svg id="iconCheck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </span>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">7</div>
+      <div class="stat-label">Security Rules</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">1,000</div>
+      <div class="stat-label">Fuzz Iterations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">2</div>
+      <div class="stat-label">Networks</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">&lt;5s</div>
+      <div class="stat-label">Scan Time</div>
+    </div>
+  </div>
+
+  <!-- Capabilities -->
+  <div class="capabilities">
+    <div class="cap-card">
+      <div class="cap-icon">&#x1f50d;</div>
+      <div class="cap-title">Fork Engine</div>
+      <div class="cap-desc">Snapshot program accounts from devnet or mainnet. Test against real on-chain state without deploying.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">&#x1f6e1;</div>
+      <div class="cap-title">Security Scanner</div>
+      <div class="cap-desc">7 IDL-based checks: missing signers, unchecked owners, arithmetic overflow, reinitialization, CPI authority, rent exemption.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-icon">&#x1f9ea;</div>
+      <div class="cap-title">Fuzz Tester</div>
+      <div class="cap-desc">Random input generation with boundary injection. Finds crashes, overflows, and invariant violations automatically.</div>
+    </div>
+  </div>
+
+  <!-- Scanner Demo -->
+  <section class="scanner-section" id="demo">
+    <div class="scanner-title">
+      <span class="dot"></span> LIVE SCAN DEMO
+    </div>
+
+    <div class="target-bar">
+      <span class="target-label">Target</span>
+      <span class="target-value">ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</span>
+      <button class="scan-btn" id="runAllBtn" onclick="runAllScans()">Run All Scans</button>
+    </div>
+
+    <div class="results-grid">
+      <!-- Fork Panel -->
+      <div class="result-panel" id="panel-fork" onclick="togglePanel('fork')">
+        <div class="result-header">
+          <div class="result-header-left">
+            <span class="result-status idle" id="status-fork">READY</span>
+            <span class="result-name">Fork Engine</span>
+          </div>
+          <div>
+            <span class="result-meta" id="meta-fork">devnet snapshot</span>
+            <span class="result-chevron">&#9654;</span>
+          </div>
+        </div>
+        <div class="progress-container" id="progress-fork">
+          <div class="progress-bar"><div class="progress-fill" id="fill-fork"></div></div>
+          <div class="progress-label" id="plabel-fork">Initializing...</div>
+        </div>
+        <div class="result-body">
+          <div class="terminal" id="term-fork"></div>
+        </div>
+      </div>
+
+      <!-- Security Panel -->
+      <div class="result-panel" id="panel-security" onclick="togglePanel('security')">
+        <div class="result-header">
+          <div class="result-header-left">
+            <span class="result-status idle" id="status-security">READY</span>
+            <span class="result-name">Security Scanner</span>
+          </div>
+          <div>
+            <span class="result-meta" id="meta-security">7 checks</span>
+            <span class="result-chevron">&#9654;</span>
+          </div>
+        </div>
+        <div class="progress-container" id="progress-security">
+          <div class="progress-bar"><div class="progress-fill" id="fill-security"></div></div>
+          <div class="progress-label" id="plabel-security">Initializing...</div>
+        </div>
+        <div class="result-body">
+          <div class="terminal" id="term-security"></div>
+        </div>
+      </div>
+
+      <!-- Fuzz Panel -->
+      <div class="result-panel" id="panel-fuzz" onclick="togglePanel('fuzz')">
+        <div class="result-header">
+          <div class="result-header-left">
+            <span class="result-status idle" id="status-fuzz">READY</span>
+            <span class="result-name">Fuzz Tester</span>
+          </div>
+          <div>
+            <span class="result-meta" id="meta-fuzz">1000 iterations</span>
+            <span class="result-chevron">&#9654;</span>
+          </div>
+        </div>
+        <div class="progress-container" id="progress-fuzz">
+          <div class="progress-bar"><div class="progress-fill" id="fill-fuzz"></div></div>
+          <div class="progress-label" id="plabel-fuzz">Initializing...</div>
+        </div>
+        <div class="result-body">
+          <div class="terminal" id="term-fuzz"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="quickstart" id="quickstart">
+    <div class="qs-title">Quick Start</div>
+    <div class="qs-block">
+      <span class="comment"># Install</span><br>
+      <span class="cmd">npm install -g solanatestforge</span><br><br>
+      <span class="comment"># Fork devnet state</span><br>
+      <span class="cmd">solforge fork devnet &lt;PROGRAM_ID&gt;</span><br><br>
+      <span class="comment"># Run security scan</span><br>
+      <span class="cmd">solforge security ./target/idl/my_program.json</span><br><br>
+      <span class="comment"># Fuzz test</span><br>
+      <span class="cmd">solforge fuzz ./target/idl/my_program.json</span><br>
+    </div>
+  </section>
+
+  <div class="footer">
+    Built for Solana. Open source. <a href="#">GitHub</a>
+  </div>
+
+  <script>
+    function copyHeroCmd() {
+      navigator.clipboard.writeText('solforge security ./target/idl/my_program.json');
+      const copy = document.getElementById('iconCopy');
+      const check = document.getElementById('iconCheck');
+      copy.style.display = 'none';
+      check.style.display = 'block';
+      check.classList.remove('check-anim');
+      void check.offsetWidth;
+      check.classList.add('check-anim');
+      setTimeout(() => {
+        check.style.display = 'none';
+        check.classList.remove('check-anim');
+        copy.style.display = 'block';
+      }, 1800);
+    }
+
+    // Output data for each scan
+    const OUTPUTS = {
+      fork: {
+        steps: [
+          { delay: 300, text: '<span class="cmd">$ solforge fork devnet ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</span>' },
+          { delay: 600, text: '<span class="d">Connecting to https://api.devnet.solana.com...</span>' },
+          { delay: 400, text: '<span class="d">Fetching program accounts...</span>' },
+          { delay: 800, text: '<span class="g">&#10004;</span> Forked <span class="w">5 accounts</span> at slot <span class="w">455,258,642</span>' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '  <span class="d">Account 1:</span> <span class="w">Exchange</span>        <span class="d">232 bytes</span>' },
+          { delay: 100, text: '  <span class="d">Account 2:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
+          { delay: 100, text: '  <span class="d">Account 3:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
+          { delay: 100, text: '  <span class="d">Account 4:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
+          { delay: 100, text: '  <span class="d">Account 5:</span> <span class="w">DataProvider</span>   <span class="d">196 bytes</span>' },
+          { delay: 200, text: '' },
+          { delay: 300, text: '  <span class="d">Snapshot saved:</span> <span class="g">.solforge/fork_ERSbyEx6_455258642.json</span>' },
+        ],
+        progress: [
+          { pct: 20, label: 'Connecting to RPC...' },
+          { pct: 50, label: 'Fetching accounts...' },
+          { pct: 80, label: 'Parsing account data...' },
+          { pct: 100, label: 'Snapshot saved' },
+        ],
+        status: 'pass',
+        statusText: 'DONE',
+        meta: '5 accounts / slot 455M',
+      },
+      security: {
+        steps: [
+          { delay: 300, text: '<span class="cmd">$ solforge security forexforsoul.json</span>' },
+          { delay: 500, text: '<span class="d">Loading IDL...</span>' },
+          { delay: 300, text: '<span class="g">&#10004;</span> IDL loaded: <span class="w">forexforsoul</span> | <span class="w">8</span> instructions' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
+          { delay: 100, text: '  <span class="w">Security Report: forexforsoul</span>' },
+          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '  <span class="r">3</span> critical  <span class="r">0</span> high  <span class="y">0</span> medium  <span class="d">0</span> low' },
+          { delay: 200, text: '' },
+          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
+          { delay: 100, text: '  Account "authority" looks like an authority but is not a signer' },
+          { delay: 100, text: '  <span class="d">instruction:</span> add_trading_pair  <span class="d">account:</span> authority' },
+          { delay: 200, text: '' },
+          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
+          { delay: 100, text: '  Account "authority" is not a signer' },
+          { delay: 100, text: '  <span class="d">instruction:</span> initialize_exchange  <span class="d">account:</span> authority' },
+          { delay: 200, text: '' },
+          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
+          { delay: 100, text: '  Account "authority" is not a signer' },
+          { delay: 100, text: '  <span class="d">instruction:</span> update_price  <span class="d">account:</span> authority' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
+          { delay: 100, text: '  <span class="w">Check Summary</span>' },
+          { delay: 100, text: '' },
+          { delay: 150, text: '  <span class="bg-r">FAIL</span>  missing-signer        <span class="d">&#8212; 3 issue(s)</span>' },
+          { delay: 150, text: '  <span class="bg-g">PASS</span>  unchecked-owner' },
+          { delay: 150, text: '  <span class="bg-g">PASS</span>  arithmetic-overflow' },
+          { delay: 150, text: '  <span class="bg-g">PASS</span>  reinitialization' },
+          { delay: 150, text: '  <span class="bg-g">PASS</span>  cpi-authority' },
+          { delay: 150, text: '  <span class="bg-g">PASS</span>  rent-exemption' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
+          { delay: 200, text: '  <span class="r">1 failed</span><span class="d">, 5 passed, 6 total</span>' },
+        ],
+        progress: [
+          { pct: 15, label: 'Loading IDL...' },
+          { pct: 30, label: 'Checking signers...' },
+          { pct: 50, label: 'Checking account owners...' },
+          { pct: 65, label: 'Checking arithmetic...' },
+          { pct: 80, label: 'Checking CPI authority...' },
+          { pct: 95, label: 'Generating report...' },
+          { pct: 100, label: 'Scan complete' },
+        ],
+        status: 'fail',
+        statusText: '3 CRITICAL',
+        meta: '5 pass / 1 fail',
+      },
+      fuzz: {
+        steps: [
+          { delay: 300, text: '<span class="cmd">$ solforge fuzz forexforsoul.json --iterations 1000</span>' },
+          { delay: 500, text: '<span class="d">Loading IDL and generating test inputs...</span>' },
+          { delay: 400, text: '' },
+          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
+          { delay: 100, text: '  <span class="w">Fuzz Results</span>' },
+          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '  Iterations:  <span class="w">1,000</span>' },
+          { delay: 100, text: '  Passed:      <span class="g">975</span>' },
+          { delay: 100, text: '  Crashes:     <span class="r">25</span>' },
+          { delay: 100, text: '  Timeouts:    <span class="d">0</span>' },
+          { delay: 100, text: '  Findings:    <span class="y">32</span>' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
+          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 20: Max value for "shares" in withdraw_liquidity <span class="d">&#8212; overflow</span>' },
+          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 44: Negative "size" in open_position <span class="d">&#8212; underflow</span>' },
+          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 58: Max value for "price" in update_price <span class="d">&#8212; overflow</span>' },
+          { delay: 200, text: '  <span class="bg-y">WARN</span>  iter 216: Zero "amount" in deposit_liquidity <span class="d">&#8212; div by zero</span>' },
+          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 319: Max value for "size" in open_position <span class="d">&#8212; overflow</span>' },
+          { delay: 150, text: '  <span class="d">... and 27 more findings</span>' },
+          { delay: 200, text: '' },
+          { delay: 100, text: '  <span class="r">25 crash(es)</span><span class="d">,</span> <span class="y">32 finding(s)</span>' },
+        ],
+        progress: [
+          { pct: 10, label: 'Generating inputs... (0/1000)' },
+          { pct: 25, label: 'Fuzzing... (250/1000)' },
+          { pct: 50, label: 'Fuzzing... (500/1000)' },
+          { pct: 75, label: 'Fuzzing... (750/1000)' },
+          { pct: 90, label: 'Analyzing crashes...' },
+          { pct: 100, label: '1000 iterations complete' },
+        ],
+        status: 'warn',
+        statusText: '25 CRASHES',
+        meta: '975 pass / 25 crash / 32 findings',
+      },
+    };
+
+    let scanning = false;
+
+    function togglePanel(name) {
+      if (scanning) return;
+      const panel = document.getElementById('panel-' + name);
+      panel.classList.toggle('active');
+    }
+
+    async function runScan(name) {
+      const data = OUTPUTS[name];
+      const panel = document.getElementById('panel-' + name);
+      const term = document.getElementById('term-' + name);
+      const status = document.getElementById('status-' + name);
+      const meta = document.getElementById('meta-' + name);
+      const progressEl = document.getElementById('progress-' + name);
+      const fill = document.getElementById('fill-' + name);
+      const plabel = document.getElementById('plabel-' + name);
+
+      // reset
+      term.innerHTML = '';
+      panel.classList.add('active');
+      status.className = 'result-status idle';
+      status.textContent = 'SCANNING';
+      progressEl.classList.add('visible');
+
+      // progress animation
+      for (const p of data.progress) {
+        await sleep(400);
+        fill.style.width = p.pct + '%';
+        plabel.textContent = p.label;
+      }
+
+      await sleep(300);
+      progressEl.classList.remove('visible');
+
+      // type output
+      for (const step of data.steps) {
+        await sleep(step.delay);
+        if (step.text === '') {
+          term.innerHTML += '<br>';
+        } else {
+          term.innerHTML += step.text + '<br>';
+        }
+        term.scrollTop = term.scrollHeight;
+      }
+
+      // final status
+      status.className = 'result-status ' + data.status;
+      status.textContent = data.statusText;
+      meta.textContent = data.meta;
+    }
+
+    async function runAllScans() {
+      if (scanning) return;
+      scanning = true;
+      const btn = document.getElementById('runAllBtn');
+      btn.classList.add('active');
+      btn.textContent = 'Scanning...';
+
+      await runScan('fork');
+      await sleep(500);
+      await runScan('security');
+      await sleep(500);
+      await runScan('fuzz');
+
+      btn.classList.remove('active');
+      btn.textContent = 'Run All Scans';
+      scanning = false;
+    }
+
+    function sleep(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
+  </script>
+</body>
+</html>
