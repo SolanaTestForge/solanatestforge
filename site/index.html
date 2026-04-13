@@ -164,6 +164,15 @@
     }
 
     .hero-cmd .prompt { color: var(--text-dim); }
+    .hero-cmd:hover #iconCopy { opacity: 0.9 !important; }
+    .hero-cmd:hover { border-color: var(--green); }
+
+    @keyframes checkPop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .check-anim { animation: checkPop 0.35s ease-out forwards; }
 
     /* Stats bar */
     .stats {
@@ -524,8 +533,16 @@
   <section class="hero">
     <h1>SolanaTestForge</h1>
     <p>Fork devnet state. Scan for vulnerabilities. Fuzz with random inputs. Ship secure Solana programs.</p>
-    <div class="hero-cmd">
-      <span class="prompt">$ </span>solforge security ./target/idl/my_program.json
+    <div class="hero-cmd" id="heroCmdBox" style="cursor:pointer;display:inline-flex;align-items:center;gap:14px" onclick="copyHeroCmd()">
+      <span><span class="prompt">$ </span>solforge security ./target/idl/my_program.json</span>
+      <span class="hero-cmd-icon" id="heroCmdIcon">
+        <svg id="iconCopy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.35;transition:all 0.2s">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <svg id="iconCheck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </span>
     </div>
   </section>
 
@@ -666,6 +683,22 @@
   </div>
 
   <script>
+    function copyHeroCmd() {
+      navigator.clipboard.writeText('solforge security ./target/idl/my_program.json');
+      const copy = document.getElementById('iconCopy');
+      const check = document.getElementById('iconCheck');
+      copy.style.display = 'none';
+      check.style.display = 'block';
+      check.classList.remove('check-anim');
+      void check.offsetWidth;
+      check.classList.add('check-anim');
+      setTimeout(() => {
+        check.style.display = 'none';
+        check.classList.remove('check-anim');
+        copy.style.display = 'block';
+      }, 1800);
+    }
+
     // Output data for each scan
     const OUTPUTS = {
       fork: {
