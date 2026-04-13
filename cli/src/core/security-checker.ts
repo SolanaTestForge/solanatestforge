@@ -120,7 +120,8 @@ export function runSecurityChecks(idl: AnchorIdl): SecurityIssue[] {
 }
 
 export function formatReport(issues: SecurityIssue[], programName: string): string {
-  const chalk = require('chalk')
+  const chalkMod = require('chalk')
+  const chalk = chalkMod.default || chalkMod
   const { severityBadge, header, divider, resultTable, summary } = require('./output')
 
   const lines: string[] = [header(`Security Report: ${programName}`)]

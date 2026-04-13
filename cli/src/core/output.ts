@@ -67,6 +67,7 @@ export function summary(total: number, passed: number, failed: number, warnings:
 
 export function spinner(text: string) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const ora = require('ora')
+  const oraModule = require('ora')
+  const ora = oraModule.default || oraModule
   return ora({ text, spinner: 'dots' }).start()
 }
