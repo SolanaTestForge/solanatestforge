@@ -7,7 +7,4 @@ target/
 .DS_Store
 .vercel
 test-results/
-WORKLOG.md
-REVIEWS.md
-REFERENCES.md
 cli/.solforge/
