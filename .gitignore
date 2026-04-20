@@ -8,3 +8,4 @@ target/
 .vercel
 test-results/
 cli/.solforge/
+cli/.tsbuildinfo
