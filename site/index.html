@@ -1,893 +1,1499 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SolanaTestForge — Security Scanner</title>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #0a0e17;
-      --panel: #111827;
-      --border: #1e2a3a;
-      --green: #00ff41;
-      --green-dim: #00cc33;
-      --red: #ff4757;
-      --yellow: #ffa502;
-      --cyan: #00d2ff;
-      --text: #c9d1d9;
-      --text-dim: #6b7280;
-      --accent: #00ff41;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    .mono { font-family: 'Source Code Pro', monospace; }
-
-    /* Scan line animation */
-    @keyframes scanline {
-      0% { transform: translateY(-100%); }
-      100% { transform: translateY(100vh); }
-    }
-
-    .scanline {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--green), transparent);
-      opacity: 0.08;
-      animation: scanline 8s linear infinite;
-      pointer-events: none;
-      z-index: 100;
-    }
-
-    /* Grid background */
-    .grid-bg {
-      background-image:
-        linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-    }
-
-    /* Header */
-    .header {
-      border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      backdrop-filter: blur(12px);
-      background: rgba(10, 14, 23, 0.9);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo {
-      font-family: 'Source Code Pro', monospace;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--green);
-      letter-spacing: 1px;
-    }
-
-    .status-badge {
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: rgba(0, 255, 65, 0.1);
-      color: var(--green);
-      border: 1px solid rgba(0, 255, 65, 0.2);
-      font-family: 'Source Code Pro', monospace;
-    }
-
-    .header-right {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .header-link {
-      font-size: 12px;
-      color: var(--text-dim);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .header-link:hover { color: var(--green); }
-
-    .install-btn {
-      font-family: 'Source Code Pro', monospace;
-      font-size: 11px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--green);
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .install-btn:hover {
-      border-color: var(--green);
-      background: rgba(0, 255, 65, 0.05);
-    }
-
-    /* Hero */
-    .hero {
-      text-align: center;
-      padding: 80px 24px 40px;
-      position: relative;
-    }
-
-    .hero h1 {
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      background: linear-gradient(135deg, var(--green), var(--cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .hero p {
-      font-size: 16px;
-      color: var(--text-dim);
-      max-width: 500px;
-      margin: 0 auto 32px;
-    }
-
-    .hero-cmd {
-      display: inline-block;
-      font-family: 'Source Code Pro', monospace;
-      font-size: 13px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      padding: 10px 20px;
-      border-radius: 8px;
-      color: var(--green);
-    }
-
-    .hero-cmd .prompt { color: var(--text-dim); }
-    .hero-cmd:hover #iconCopy { opacity: 0.9 !important; }
-    .hero-cmd:hover { border-color: var(--green); }
-
-    @keyframes checkPop {
-      0% { transform: scale(0); opacity: 0; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .check-anim { animation: checkPop 0.35s ease-out forwards; }
-
-    /* Stats bar */
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 48px;
-      padding: 24px;
-      margin: 0 auto;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat-value {
-      font-family: 'Source Code Pro', monospace;
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--green);
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-
-    /* Capabilities */
-    .capabilities {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 24px;
-    }
-
-    .cap-card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      transition: all 0.3s;
-    }
-
-    .cap-card:hover {
-      border-color: rgba(0, 255, 65, 0.3);
-      transform: translateY(-2px);
-    }
-
-    .cap-icon {
-      font-size: 20px;
-      margin-bottom: 12px;
-    }
-
-    .cap-title {
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 8px;
-      color: white;
-    }
-
-    .cap-desc {
-      font-size: 12px;
-      color: var(--text-dim);
-      line-height: 1.6;
-    }
-
-    /* Scanner section */
-    .scanner-section {
-      max-width: 900px;
-      margin: 60px auto;
-      padding: 0 24px;
-    }
-
-    .scanner-title {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--text-dim);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .scanner-title .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse-dot 2s infinite;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    /* Target bar */
-    .target-bar {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .target-label {
-      font-size: 11px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .target-value {
-      font-family: 'Source Code Pro', monospace;
-      font-size: 13px;
-      color: var(--cyan);
-      flex: 1;
-    }
-
-    .scan-btn {
-      font-family: 'Source Code Pro', monospace;
-      font-size: 11px;
-      padding: 6px 16px;
-      border-radius: 6px;
-      border: 1px solid var(--green);
-      background: rgba(0, 255, 65, 0.1);
-      color: var(--green);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .scan-btn:hover {
-      background: rgba(0, 255, 65, 0.2);
-    }
-
-    .scan-btn.active {
-      background: var(--green);
-      color: var(--bg);
-    }
-
-    /* Results panels */
-    .results-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-
-    .result-panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      transition: all 0.3s;
-    }
-
-    .result-panel.active {
-      border-color: rgba(0, 255, 65, 0.3);
-    }
-
-    .result-header {
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .result-header:hover {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .result-header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .result-status {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-family: 'Source Code Pro', monospace;
-    }
-
-    .result-status.pass { background: rgba(0, 255, 65, 0.15); color: var(--green); }
-    .result-status.warn { background: rgba(255, 165, 2, 0.15); color: var(--yellow); }
-    .result-status.fail { background: rgba(255, 71, 87, 0.15); color: var(--red); }
-    .result-status.idle { background: rgba(107, 114, 128, 0.15); color: var(--text-dim); }
-
-    .result-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: white;
-    }
-
-    .result-meta {
-      font-size: 11px;
-      color: var(--text-dim);
-      font-family: 'Source Code Pro', monospace;
-    }
-
-    .result-chevron {
-      color: var(--text-dim);
-      transition: transform 0.3s;
-      font-size: 12px;
-    }
-
-    .result-panel.active .result-chevron {
-      transform: rotate(90deg);
-    }
-
-    .result-body {
-      display: none;
-      border-top: 1px solid var(--border);
-    }
-
-    .result-panel.active .result-body {
-      display: block;
-    }
-
-    .terminal {
-      padding: 16px;
-      font-family: 'Source Code Pro', monospace;
-      font-size: 12px;
-      line-height: 1.8;
-      background: #0d1117;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
-    .terminal .cmd { color: var(--cyan); }
-    .terminal .g { color: var(--green); }
-    .terminal .r { color: var(--red); }
-    .terminal .y { color: var(--yellow); }
-    .terminal .d { color: var(--text-dim); }
-    .terminal .w { color: white; font-weight: 600; }
-    .terminal .bg-g { background: rgba(0, 255, 65, 0.2); color: var(--green); padding: 1px 6px; border-radius: 3px; }
-    .terminal .bg-r { background: rgba(255, 71, 87, 0.2); color: var(--red); padding: 1px 6px; border-radius: 3px; }
-    .terminal .bg-y { background: rgba(255, 165, 2, 0.2); color: var(--yellow); padding: 1px 6px; border-radius: 3px; }
-
-    /* Typing cursor */
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    .cursor {
-      display: inline-block;
-      width: 7px;
-      height: 14px;
-      background: var(--green);
-      animation: blink 1s infinite;
-      vertical-align: middle;
-      margin-left: 2px;
-    }
-
-    /* Progress bar */
-    .progress-container {
-      margin: 12px 16px;
-      display: none;
-    }
-
-    .progress-container.visible { display: block; }
-
-    .progress-bar {
-      height: 3px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--green);
-      border-radius: 2px;
-      transition: width 0.3s;
-      width: 0%;
-    }
-
-    .progress-label {
-      font-size: 10px;
-      color: var(--text-dim);
-      font-family: 'Source Code Pro', monospace;
-      margin-top: 6px;
-    }
-
-    /* Footer */
-    .footer {
-      text-align: center;
-      padding: 60px 24px 40px;
-      font-size: 12px;
-      color: var(--text-dim);
-    }
-
-    .footer a { color: var(--green); text-decoration: none; }
-
-    /* Quick start */
-    .quickstart {
-      max-width: 600px;
-      margin: 40px auto;
-      padding: 0 24px;
-    }
-
-    .qs-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      color: white;
-    }
-
-    .qs-block {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-      font-family: 'Source Code Pro', monospace;
-      font-size: 12px;
-      line-height: 2;
-    }
-
-    .qs-block .comment { color: var(--text-dim); }
-    .qs-block .cmd { color: var(--green); }
-
-    @media (max-width: 768px) {
-      .capabilities { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 32px; }
-      .stats { gap: 24px; flex-wrap: wrap; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SolanaTestForge — Blueprint for safer Solana programs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Departure+Mono&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#0c1824;
+  --paper-2:#0f2030;
+  --ink:#dce8f3;
+  --ink-soft:#8aa0b8;
+  --ink-faint:#4a6178;
+  --line:#1e3c5c;
+  --line-soft:#152a40;
+  --cyan:#49d4ff;
+  --cyan-dim:#1e85b3;
+  --forge:#ff8a3d;
+  --forge-hot:#ff5a1f;
+  --molten:#ffc866;
+  --spark:#fff0c2;
+  --safe:#5af2a8;
+  --warn:#ffcc47;
+  --fail:#ff5770;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--paper);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{
+  background-image:
+    radial-gradient(ellipse 1000px 600px at 80% -10%, rgba(255,138,61,.07), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 10% 100%, rgba(73,212,255,.05), transparent 60%),
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size:auto,auto,64px 64px,64px 64px;
+  background-position:0 0,0 0,-1px -1px,-1px -1px;
+  min-height:100vh;
+  animation:bg-drift 30s linear infinite;
+}
+@keyframes bg-drift{
+  0%{background-position:0 0,0 0,-1px -1px,-1px -1px}
+  100%{background-position:0 0,0 0,-65px -65px,-65px -65px}
+}
+
+/* ambient beam that sweeps across the viewport */
+.ambient-beam{
+  position:fixed;top:0;left:-20%;width:120%;height:3px;pointer-events:none;z-index:5;
+  background:linear-gradient(90deg,transparent,rgba(73,212,255,.5),rgba(255,138,61,.7),rgba(73,212,255,.5),transparent);
+  filter:blur(1px);
+  opacity:.5;
+  animation:beam-sweep 14s ease-in-out infinite
+}
+@keyframes beam-sweep{
+  0%{top:0;opacity:0}
+  5%{opacity:.5}
+  50%{top:100vh;opacity:.4}
+  55%{opacity:0}
+  100%{top:0;opacity:0}
+}
+
+/* reveal on scroll */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+.reveal.d1{transition-delay:.08s}
+.reveal.d2{transition-delay:.16s}
+.reveal.d3{transition-delay:.24s}
+.reveal.d4{transition-delay:.32s}
+.reveal.d5{transition-delay:.4s}
+.reveal.d6{transition-delay:.48s}
+.reveal.d7{transition-delay:.56s}
+.mono{font-family:'Departure Mono','Courier New',monospace;letter-spacing:.02em}
+
+/* --- reticle cursor overlay --- */
+.reticle{position:fixed;width:32px;height:32px;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);opacity:0;transition:opacity .25s,width .25s,height .25s}
+.reticle.on{opacity:.7;width:44px;height:44px}
+.reticle::before,.reticle::after{content:"";position:absolute;background:var(--cyan);box-shadow:0 0 6px rgba(73,212,255,.8)}
+.reticle::before{left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%)}
+.reticle::after{top:50%;left:0;right:0;height:1px;transform:translateY(-50%)}
+.reticle span{position:absolute;inset:0;border:1px solid var(--cyan);border-radius:50%;opacity:.5;animation:ret-rot 6s linear infinite}
+.reticle.on span{border:1px dashed var(--forge);animation:ret-rot-fast 2s linear infinite}
+.reticle i{position:absolute;inset:6px;border:1px solid var(--cyan);border-radius:50%;opacity:.2;animation:ret-rot 10s linear infinite reverse}
+@keyframes ret-rot{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes ret-rot-fast{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+
+/* --- rivets --- */
+.rivet{position:absolute;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 35% 35%, #3a5574, #0b1420 70%);box-shadow:inset 0 0 2px rgba(0,0,0,.6),0 0 0 1px var(--line)}
+
+/* --- nav --- */
+nav{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;
+  border-bottom:1px solid var(--line);
+  background:rgba(12,24,36,.7);
+  backdrop-filter:blur(10px);
+}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-mark{width:30px;height:30px;position:relative;animation:brand-spin 22s linear infinite}
+@keyframes brand-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.brand-mark svg{display:block}
+.brand-name{font-family:'Departure Mono',monospace;font-size:14px;letter-spacing:.1em}
+.brand-name b{color:var(--forge)}
+.nav-links{display:flex;gap:22px;align-items:center}
+.nav-links a{color:var(--ink-soft);text-decoration:none;font-size:13px;letter-spacing:.03em;transition:color .2s}
+.nav-links a:hover{color:var(--cyan)}
+.rev-stamp{
+  font-family:'Departure Mono',monospace;font-size:10px;
+  padding:4px 10px;border:1px dashed var(--line);border-radius:2px;
+  color:var(--ink-faint);letter-spacing:.1em
+}
+.nav-cta{
+  font-family:'Departure Mono',monospace;font-size:11px;
+  padding:7px 14px;border:1px solid var(--forge);background:transparent;color:var(--forge);
+  cursor:pointer;transition:all .2s;letter-spacing:.08em
+}
+.nav-cta:hover{background:var(--forge);color:var(--paper);box-shadow:0 0 22px rgba(255,138,61,.4)}
+
+/* --- title block (engineering drawing corner) --- */
+.title-block{
+  position:fixed;right:18px;bottom:18px;z-index:10;
+  width:240px;pointer-events:none;
+  border:1px solid var(--line);
+  background:rgba(15,32,48,.75);
+  backdrop-filter:blur(6px);
+  font-family:'Departure Mono',monospace;font-size:9px;
+  color:var(--ink-faint);letter-spacing:.06em
+}
+.title-block .row{display:flex;border-bottom:1px solid var(--line)}
+.title-block .row:last-child{border-bottom:none}
+.title-block .k{padding:4px 8px;border-right:1px solid var(--line);color:var(--ink-faint);width:70px}
+.title-block .v{padding:4px 8px;color:var(--ink);flex:1}
+.title-block .v.hot{color:var(--forge);animation:hot-text 2s ease-in-out infinite}
+@keyframes hot-text{
+  0%,100%{text-shadow:0 0 4px rgba(255,138,61,.4)}
+  50%{text-shadow:0 0 14px rgba(255,138,61,.9)}
+}
+.title-block::before{
+  content:"";position:absolute;top:-6px;left:-6px;width:12px;height:12px;
+  border-top:2px solid var(--forge);border-left:2px solid var(--forge);
+}
+.title-block::after{
+  content:"";position:absolute;bottom:-6px;right:-6px;width:12px;height:12px;
+  border-bottom:2px solid var(--forge);border-right:2px solid var(--forge);
+}
+
+/* --- hero --- */
+.hero{position:relative;padding:64px 28px 40px;max-width:1400px;margin:0 auto}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.hero-left{position:relative}
+.breadcrumb{display:flex;gap:10px;align-items:center;margin-bottom:22px;font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:.14em}
+.breadcrumb .dot{width:4px;height:4px;border-radius:50%;background:var(--forge);box-shadow:0 0 10px var(--forge);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+h1{
+  font-family:'Departure Mono',monospace;
+  font-size:68px;line-height:.98;font-weight:400;
+  letter-spacing:-.01em;color:var(--ink);margin-bottom:20px
+}
+h1 .hot{color:var(--forge);position:relative;display:inline-block;animation:hot-flicker 3.4s ease-in-out infinite}
+h1 .hot::before{
+  content:"safer";position:absolute;inset:0;color:var(--cyan);
+  opacity:0;mix-blend-mode:screen;pointer-events:none;
+  animation:glitch-a 4.5s infinite
+}
+h1 .hot::after{
+  content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--forge),transparent);
+  filter:blur(1px);
+  animation:under-slide 3s ease-in-out infinite
+}
+h1 .cy{color:var(--cyan);position:relative}
+@keyframes hot-flicker{
+  0%,92%,100%{text-shadow:0 0 0 transparent}
+  93%{text-shadow:-1px 0 var(--cyan),1px 0 var(--forge-hot)}
+  94%{text-shadow:2px 0 var(--cyan),-2px 0 var(--forge-hot)}
+  95%{text-shadow:0 0 0 transparent}
+  96%{text-shadow:-1px 0 var(--forge-hot),1px 0 var(--cyan)}
+  97%{text-shadow:0 0 0 transparent}
+}
+@keyframes glitch-a{
+  0%,88%,100%{opacity:0;transform:translate(0,0)}
+  89%{opacity:.6;transform:translate(-2px,1px)}
+  91%{opacity:.4;transform:translate(2px,-1px)}
+  92%{opacity:0}
+}
+@keyframes under-slide{
+  0%,100%{transform:translateX(-8%) scaleX(.95)}
+  50%{transform:translateX(8%) scaleX(1.05)}
+}
+.sub{font-size:17px;color:var(--ink-soft);max-width:520px;margin-bottom:34px;line-height:1.55}
+.sub em{color:var(--cyan);font-style:normal}
+
+.cta-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.cta-primary{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:'Departure Mono',monospace;font-size:13px;
+  padding:14px 20px;border:none;cursor:pointer;
+  background:var(--forge);color:var(--paper);
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+  transition:all .2s;letter-spacing:.06em
+}
+.cta-primary:hover{background:var(--molten);box-shadow:0 0 40px rgba(255,138,61,.5)}
+.cta-primary{position:relative;overflow:hidden}
+.cta-primary::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.3) 50%,transparent 70%);
+  transform:translateX(-100%);
+  transition:transform .6s
+}
+.cta-primary:hover::before{transform:translateX(100%)}
+.cta-secondary{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:'Departure Mono',monospace;font-size:12px;
+  padding:13px 18px;background:transparent;
+  border:1px solid var(--line);color:var(--ink);cursor:pointer;
+  transition:all .2s;letter-spacing:.05em
+}
+.cta-secondary:hover{border-color:var(--cyan);color:var(--cyan)}
+.cta-secondary .ok{display:none;color:var(--safe)}
+.cta-secondary.copied .ok{display:inline}
+.cta-secondary.copied .txt{display:none}
+
+/* --- measurement annotations around hero text --- */
+.measure{position:absolute;font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);pointer-events:none;letter-spacing:.1em}
+.measure .line{background:var(--line);position:absolute}
+.measure.top{top:-32px;left:0;right:0;height:24px}
+.measure.top .line{top:12px;left:0;right:0;height:1px}
+.measure.top .line::before,.measure.top .line::after{content:"";position:absolute;top:-4px;width:1px;height:9px;background:var(--line)}
+.measure.top .line::before{left:0}
+.measure.top .line::after{right:0}
+.measure.top .val{position:absolute;left:50%;top:0;transform:translateX(-50%);background:var(--paper);padding:0 8px}
+
+/* --- hero blueprint --- */
+.hero-right{position:relative;aspect-ratio:1/1;max-width:560px;margin-left:auto}
+.blueprint{width:100%;height:100%}
+.blueprint .grid-line{stroke:var(--line-soft);stroke-width:.5}
+.blueprint .g-line{stroke:var(--line);stroke-width:1;fill:none}
+.blueprint .g-line.dashed{stroke-dasharray:4 3}
+.blueprint .n-line{stroke:var(--cyan);stroke-width:1;fill:none;stroke-dasharray:800;stroke-dashoffset:800;animation:draw 3.5s ease-out forwards}
+.blueprint .n-line.d2{animation-delay:.6s}
+.blueprint .n-line.d3{animation-delay:1.2s}
+.blueprint .n-line.d4{animation-delay:1.8s}
+.blueprint .node{opacity:0;animation:fadein .5s forwards}
+.blueprint .node.d1{animation-delay:1s}
+.blueprint .node.d2{animation-delay:1.6s}
+.blueprint .node.d3{animation-delay:2.2s}
+.blueprint .node.d4{animation-delay:2.6s}
+.blueprint .node.d5{animation-delay:3s}
+.blueprint .node rect,.blueprint .node circle{stroke:var(--cyan);stroke-width:1.2;fill:var(--paper-2)}
+.blueprint .node text{font-family:'Departure Mono',monospace;fill:var(--ink);font-size:10px}
+.blueprint .node .sub{fill:var(--ink-faint);font-size:8px}
+.blueprint .node.hot rect{stroke:var(--forge);fill:rgba(255,138,61,.08)}
+.blueprint .node.hot text{fill:var(--forge)}
+.blueprint .dim{font-family:'Departure Mono',monospace;font-size:9px;fill:var(--ink-faint);letter-spacing:.1em}
+.blueprint .crosshair{stroke:var(--forge);stroke-width:1;animation:cross-pulse 1.8s ease-in-out infinite}
+.blueprint .scan-ring{fill:none;stroke:var(--forge);stroke-width:1;opacity:.8;animation:scan-ring 2.4s ease-out infinite}
+.blueprint .scan-beam{stroke:var(--cyan);stroke-width:1;opacity:.5;animation:scan-beam 6s linear infinite}
+.blueprint .flow-dot{fill:var(--cyan);animation:flow 2.4s ease-in-out infinite}
+.blueprint .flow-dot.o{fill:var(--forge);animation:flow 2.4s ease-in-out infinite;animation-delay:.8s}
+.blueprint .hot rect{animation:hot-bg 2.4s ease-in-out infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes cross-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes scan-ring{
+  0%{r:4;opacity:.9}
+  100%{r:28;opacity:0}
+}
+@keyframes scan-beam{
+  0%,100%{transform:translateY(-180px)}
+  50%{transform:translateY(180px)}
+}
+@keyframes flow{
+  0%{opacity:0}
+  50%{opacity:1}
+  100%{opacity:0}
+}
+@keyframes hot-bg{
+  0%,100%{fill:rgba(255,138,61,.08)}
+  50%{fill:rgba(255,138,61,.2)}
+}
+.bp-label{position:absolute;font-family:'Departure Mono',monospace;font-size:9px;color:var(--ink-faint);letter-spacing:.12em}
+.bp-label.tl{top:-10px;left:0}
+.bp-label.tr{top:-10px;right:0}
+.bp-label.bl{bottom:-14px;left:0}
+.bp-label.br{bottom:-14px;right:0;color:var(--forge)}
+
+/* --- spec strip --- */
+.spec-strip{
+  max-width:1400px;margin:30px auto 0;padding:0 28px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  border:1px solid var(--line);border-left:none;border-right:none;
+}
+.spec{padding:22px 20px;border-right:1px solid var(--line);position:relative;overflow:hidden;transition:background .3s}
+.spec:last-child{border-right:none}
+.spec::after{
+  content:"";position:absolute;left:-100%;top:0;bottom:0;width:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,138,61,.08),transparent);
+  animation:spec-swipe 8s ease-in-out infinite
+}
+.spec:nth-child(2)::after{animation-delay:2s}
+.spec:nth-child(3)::after{animation-delay:4s}
+.spec:nth-child(4)::after{animation-delay:6s}
+@keyframes spec-swipe{
+  0%,100%{left:-100%}
+  50%{left:100%}
+}
+.spec:hover{background:rgba(255,138,61,.04)}
+.spec-k{font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:.16em;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.spec-k::before{content:"";width:10px;height:1px;background:var(--forge)}
+.spec-v{font-family:'Departure Mono',monospace;font-size:32px;color:var(--ink);line-height:1;display:inline-flex;align-items:baseline}
+.spec-v .n{display:inline-block;min-width:1ch}
+.spec-v .u{font-size:14px;color:var(--ink-faint);margin-left:4px}
+.spec-d{font-size:12px;color:var(--ink-soft);margin-top:6px}
+
+/* --- section head --- */
+.section{max-width:1400px;margin:100px auto;padding:0 28px;position:relative}
+.section-head{margin-bottom:38px;display:flex;align-items:flex-end;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.section-tag{display:flex;gap:14px;align-items:center;font-family:'Departure Mono',monospace;font-size:11px;color:var(--ink-faint);letter-spacing:.2em;margin-bottom:16px}
+.section-tag b{color:var(--forge);font-weight:normal}
+.section-tag .bar{width:40px;height:1px;background:var(--forge)}
+.section-title{font-family:'Departure Mono',monospace;font-size:38px;line-height:1.05;max-width:760px;font-weight:400;position:relative;display:inline-block}
+.section-title .cy{color:var(--cyan);position:relative}
+.section-title .cy::after{
+  content:"";position:absolute;left:0;right:100%;bottom:-4px;height:2px;background:var(--cyan);
+  box-shadow:0 0 10px var(--cyan);transition:right 1.2s ease .2s
+}
+.section-title.in .cy::after{right:0}
+.section-lede{max-width:400px;color:var(--ink-soft);font-size:14px;line-height:1.6}
+
+/* --- forge process (heat lifecycle) --- */
+.process{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;position:relative}
+.process::before{
+  content:"";position:absolute;top:56px;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,var(--cyan) 0%,var(--forge) 50%,var(--forge-hot) 100%);
+  background-size:200% 100%;
+  opacity:.55;z-index:0;
+  animation:flow-gradient 3.2s linear infinite;
+  filter:drop-shadow(0 0 6px rgba(255,138,61,.4))
+}
+@keyframes flow-gradient{
+  0%{background-position:0% 50%}
+  100%{background-position:200% 50%}
+}
+.process::after{
+  content:"";position:absolute;top:54px;left:10%;width:6px;height:6px;border-radius:50%;
+  background:var(--spark);box-shadow:0 0 14px var(--molten);z-index:2;
+  animation:trace-line 3.2s ease-in-out infinite
+}
+@keyframes trace-line{
+  0%{left:10%;opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{left:90%;opacity:0}
+}
+.step{position:relative;padding:32px 24px;background:var(--paper-2);border:1px solid var(--line);z-index:1;transition:transform .3s cubic-bezier(.2,.8,.3,1),border-color .3s,box-shadow .3s;overflow:hidden}
+.step:hover{transform:translateY(-6px);border-color:var(--forge);box-shadow:0 24px 60px -20px rgba(255,138,61,.25)}
+.step::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,138,61,.15),transparent 40%);
+  opacity:0;transition:opacity .4s;pointer-events:none
+}
+.step:hover::before{opacity:1}
+.step .rivet{position:absolute}
+.step .rivet.tl{top:6px;left:6px}
+.step .rivet.tr{top:6px;right:6px}
+.step .rivet.bl{bottom:6px;left:6px}
+.step .rivet.br{bottom:6px;right:6px}
+.step-num{
+  width:48px;height:48px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Departure Mono',monospace;font-size:18px;
+  margin-bottom:20px;position:relative;
+}
+.step-num.cool{background:rgba(73,212,255,.1);color:var(--cyan);border:1px solid rgba(73,212,255,.4)}
+.step-num.warm{background:rgba(255,200,102,.1);color:var(--molten);border:1px solid rgba(255,200,102,.4)}
+.step-num.hot{background:rgba(255,90,31,.12);color:var(--forge);border:1px solid rgba(255,90,31,.5);box-shadow:0 0 28px rgba(255,90,31,.3);animation:hot-breath 2.6s ease-in-out infinite}
+@keyframes hot-breath{
+  0%,100%{box-shadow:0 0 20px rgba(255,90,31,.25);transform:scale(1)}
+  50%{box-shadow:0 0 40px rgba(255,90,31,.55);transform:scale(1.05)}
+}
+.step-num.cool::after,.step-num.warm::after,.step-num.hot::after{
+  content:"";position:absolute;inset:-6px;border:1px dashed currentColor;border-radius:50%;opacity:.35;
+  animation:ring-rot 8s linear infinite
+}
+.step-num.warm::after{animation-duration:6s}
+.step-num.hot::after{animation-duration:4s;animation-direction:reverse}
+@keyframes ring-rot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.step-title{font-family:'Departure Mono',monospace;font-size:18px;margin-bottom:10px}
+.step-desc{color:var(--ink-soft);font-size:14px;line-height:1.6;margin-bottom:16px}
+.step-cmd{
+  font-family:'Departure Mono',monospace;font-size:11px;
+  padding:10px 12px;background:var(--paper);border:1px dashed var(--line);
+  color:var(--cyan)
+}
+.step-cmd .d{color:var(--ink-faint)}
+
+/* --- BOM (bill of materials) security rules --- */
+.bom{
+  border:1px solid var(--line);background:var(--paper-2);
+}
+.bom-head{display:grid;grid-template-columns:60px 90px 1fr 120px 140px;border-bottom:1px solid var(--line);font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:.14em}
+.bom-head > div{padding:12px 16px;border-right:1px solid var(--line)}
+.bom-head > div:last-child{border-right:none}
+.bom-row{
+  display:grid;grid-template-columns:60px 90px 1fr 120px 140px;
+  border-bottom:1px solid var(--line-soft);
+  transition:background .25s,transform .25s;position:relative;
+  opacity:0;transform:translateX(-20px);
+}
+.bom-row.in{opacity:1;transform:translateX(0);transition:opacity .6s,transform .6s,background .2s}
+.bom-row:hover{background:rgba(73,212,255,.03);transform:translateX(4px)}
+.bom-row.hot:hover{background:rgba(255,138,61,.06)}
+.bom-row:last-child{border-bottom:none}
+.bom-row.hot::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--forge);box-shadow:0 0 12px var(--forge);
+  animation:edge-pulse 2s ease-in-out infinite
+}
+@keyframes edge-pulse{
+  0%,100%{box-shadow:0 0 8px var(--forge);opacity:.8}
+  50%{box-shadow:0 0 22px var(--forge);opacity:1}
+}
+.bom-row > div{padding:14px 16px;border-right:1px solid var(--line-soft);font-size:13px}
+.bom-row > div:last-child{border-right:none}
+.bom-row .idx{font-family:'Departure Mono',monospace;color:var(--ink-faint);font-size:11px}
+.bom-row .part{font-family:'Departure Mono',monospace;font-size:11px;color:var(--cyan)}
+.bom-row .desc{color:var(--ink)}
+.bom-row .desc .d{color:var(--ink-faint);font-size:12px;display:block;margin-top:3px}
+.bom-row .sev{font-family:'Departure Mono',monospace;font-size:11px;letter-spacing:.1em}
+.bom-row .sev.crit{color:var(--fail)}
+.bom-row .sev.high{color:var(--forge)}
+.bom-row .sev.med{color:var(--warn)}
+.bom-row .tol{font-family:'Departure Mono',monospace;font-size:11px;color:var(--ink-faint);letter-spacing:.08em}
+
+/* --- heat map --- */
+.heat-wrap{
+  border:1px solid var(--line);padding:28px;background:var(--paper-2);
+  position:relative;overflow:hidden
+}
+.heat-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.heat-label{font-family:'Departure Mono',monospace;font-size:11px;color:var(--ink-faint);letter-spacing:.12em}
+.heat-label b{color:var(--forge);font-weight:normal}
+.heat-btn{
+  font-family:'Departure Mono',monospace;font-size:11px;
+  padding:8px 16px;background:transparent;border:1px solid var(--forge);color:var(--forge);
+  cursor:pointer;letter-spacing:.08em;transition:all .2s
+}
+.heat-btn:hover{background:var(--forge);color:var(--paper)}
+.heat-btn.running{background:var(--forge);color:var(--paper);animation:pulse-bg 1.2s infinite}
+@keyframes pulse-bg{0%,100%{box-shadow:0 0 0 0 rgba(255,138,61,.5)}50%{box-shadow:0 0 0 8px rgba(255,138,61,0)}}
+.heat-grid{
+  display:grid;grid-template-columns:repeat(24,1fr);gap:3px;
+  margin-bottom:16px
+}
+.heat-cell{
+  aspect-ratio:1;background:rgba(30,60,92,.4);border-radius:1px;
+  transition:transform .2s,filter .2s;position:relative;cursor:crosshair
+}
+.heat-cell:hover{transform:scale(1.5);z-index:2;filter:brightness(1.5);box-shadow:0 0 14px currentColor}
+.heat-cell.c1{background:rgba(73,212,255,.25)}
+.heat-cell.c2{background:rgba(255,200,102,.55);box-shadow:0 0 6px rgba(255,200,102,.5)}
+.heat-cell.c3{background:rgba(255,138,61,.8);box-shadow:0 0 10px rgba(255,138,61,.7)}
+.heat-cell.c4{background:var(--forge-hot);box-shadow:0 0 14px var(--forge-hot)}
+.heat-cell.fail{background:var(--fail);box-shadow:0 0 14px var(--fail)}
+.heat-legend{display:flex;gap:18px;align-items:center;font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:.08em;flex-wrap:wrap}
+.heat-legend .sw{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-2px;border-radius:1px}
+.heat-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:22px;padding-top:20px;border-top:1px dashed var(--line)}
+.heat-stat-k{font-family:'Departure Mono',monospace;font-size:9px;color:var(--ink-faint);letter-spacing:.16em;margin-bottom:6px}
+.heat-stat-v{font-family:'Departure Mono',monospace;font-size:22px;color:var(--ink)}
+.heat-stat-v.safe{color:var(--safe)}
+.heat-stat-v.fail{color:var(--fail)}
+.heat-stat-v.warm{color:var(--forge)}
+
+/* --- live forge (terminal) --- */
+.forge-deck{display:grid;grid-template-columns:300px 1fr;gap:20px}
+.forge-side{display:flex;flex-direction:column;gap:10px}
+.forge-tab{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 18px;background:var(--paper-2);border:1px solid var(--line);
+  cursor:pointer;transition:all .2s;position:relative;
+  font-family:'Departure Mono',monospace;font-size:12px
+}
+.forge-tab::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:transparent;transition:background .2s
+}
+.forge-tab.active::before{background:var(--forge);box-shadow:0 0 12px var(--forge)}
+.forge-tab.active{background:rgba(255,138,61,.06);border-color:var(--forge)}
+.forge-tab::after{
+  content:"";position:absolute;left:-100%;top:0;bottom:0;width:40%;
+  background:linear-gradient(90deg,transparent,rgba(255,138,61,.15),transparent);
+  pointer-events:none;opacity:0
+}
+.forge-tab.active::after{opacity:1;animation:shimmer 2.4s ease-in-out infinite}
+@keyframes shimmer{
+  0%{left:-100%}
+  100%{left:140%}
+}
+.forge-tab:hover{border-color:var(--cyan);transform:translateX(2px);transition:transform .3s,border-color .3s}
+.forge-tab-num{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;background:var(--paper);border:1px solid var(--line);color:var(--ink-faint)
+}
+.forge-tab.active .forge-tab-num{background:var(--forge);color:var(--paper);border-color:var(--forge)}
+.forge-tab-body{flex:1}
+.forge-tab-t{color:var(--ink);letter-spacing:.04em}
+.forge-tab-s{font-size:10px;color:var(--ink-faint);margin-top:2px;letter-spacing:.06em}
+.forge-tab.active .forge-tab-t{color:var(--forge)}
+
+.forge-screen{
+  background:var(--paper-2);border:1px solid var(--line);
+  position:relative;overflow:hidden;min-height:520px
+}
+.forge-screen .rivet{position:absolute;z-index:2}
+.forge-screen .rivet.tl{top:8px;left:8px}
+.forge-screen .rivet.tr{top:8px;right:8px}
+.forge-screen .rivet.bl{bottom:8px;left:8px}
+.forge-screen .rivet.br{bottom:8px;right:8px}
+.forge-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 22px;border-bottom:1px solid var(--line);
+  font-family:'Departure Mono',monospace;font-size:10px;
+  color:var(--ink-faint);letter-spacing:.12em;
+  background:rgba(0,0,0,.2)
+}
+.forge-bar .r{display:flex;gap:8px;align-items:center}
+.forge-dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint)}
+.forge-dot.live{background:var(--forge);box-shadow:0 0 10px var(--forge);animation:pulse 1.4s infinite}
+.forge-body{padding:22px 26px;font-family:'Departure Mono',monospace;font-size:12px;line-height:1.8;color:var(--ink);min-height:440px;max-height:520px;overflow:auto}
+.forge-body .p{color:var(--ink-faint)}
+.forge-body .cmd{color:var(--cyan)}
+.forge-body .g{color:var(--safe)}
+.forge-body .y{color:var(--warn)}
+.forge-body .r{color:var(--fail)}
+.forge-body .o{color:var(--forge)}
+.forge-body .w{color:var(--ink);font-weight:500}
+.forge-body .pill{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10px;letter-spacing:.1em;margin-right:4px}
+.forge-body .pill.ok{background:rgba(90,242,168,.15);color:var(--safe)}
+.forge-body .pill.err{background:rgba(255,87,112,.15);color:var(--fail)}
+.forge-body .pill.wrn{background:rgba(255,204,71,.15);color:var(--warn)}
+.forge-body .cursor{display:inline-block;width:8px;height:14px;background:var(--forge);vertical-align:-2px;animation:blink 1s infinite;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.sparks{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.spark{position:absolute;width:3px;height:3px;background:var(--spark);border-radius:50%;box-shadow:0 0 8px var(--molten);opacity:0}
+.spark.go{animation:fly 1s ease-out forwards}
+@keyframes fly{
+  0%{opacity:1;transform:translate(0,0) scale(1)}
+  100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.3)}
+}
+
+/* --- compare --- */
+.compare{overflow-x:auto;border:1px solid var(--line)}
+.compare table{width:100%;border-collapse:collapse;min-width:700px;font-size:13px}
+.compare th,.compare td{text-align:left;padding:14px 18px;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+.compare th{font-family:'Departure Mono',monospace;font-size:11px;color:var(--ink-faint);letter-spacing:.1em;background:var(--paper-2);font-weight:normal}
+.compare tr:last-child td{border-bottom:none}
+.compare td:first-child{color:var(--ink);font-family:'Departure Mono',monospace;font-size:11px}
+.compare td.ok{color:var(--safe)}
+.compare td.bad{color:var(--fail)}
+.compare td.meh{color:var(--warn)}
+.compare .col-us{background:rgba(255,138,61,.04)}
+.compare tbody tr{transition:background .2s}
+.compare tbody tr:hover{background:rgba(73,212,255,.05)}
+.compare tbody tr:hover td.col-us{background:rgba(255,138,61,.12)}
+.compare td.ok::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--safe);box-shadow:0 0 8px var(--safe);margin-right:8px;animation:pulse 2s infinite}
+.compare td.bad::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--fail);margin-right:8px;opacity:.5}
+.compare td.meh::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:8px;opacity:.7}
+
+/* --- install plate --- */
+.plate{
+  max-width:900px;margin:0 auto;background:var(--paper-2);
+  border:2px solid var(--line);padding:40px 44px;position:relative
+}
+.plate::before{
+  content:"SOL-TEST-FORGE · NSN 0042-B · DWG-C4";
+  position:absolute;top:-10px;left:30px;background:var(--paper);
+  padding:0 10px;font-family:'Departure Mono',monospace;font-size:10px;color:var(--ink-faint);letter-spacing:.16em
+}
+.plate .rivet{position:absolute;width:10px;height:10px}
+.plate .rivet.tl{top:10px;left:10px}
+.plate .rivet.tr{top:10px;right:10px}
+.plate .rivet.bl{bottom:10px;left:10px}
+.plate .rivet.br{bottom:10px;right:10px}
+.plate-title{font-family:'Departure Mono',monospace;font-size:22px;margin-bottom:6px}
+.plate-sub{color:var(--ink-soft);margin-bottom:28px;font-size:14px}
+.plate-steps{display:flex;flex-direction:column;gap:14px}
+.plate-step{display:grid;grid-template-columns:36px 1fr auto;gap:14px;align-items:center;padding:14px 16px;border:1px dashed var(--line);transition:all .3s;position:relative;overflow:hidden}
+.plate-step:hover{border-color:var(--forge);border-style:solid;transform:translateX(4px)}
+.plate-step::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,rgba(255,138,61,.08),transparent);transition:width .4s
+}
+.plate-step:hover::before{width:100%}
+.plate-step .n{font-family:'Departure Mono',monospace;color:var(--forge);font-size:14px}
+.plate-step code{font-family:'Departure Mono',monospace;font-size:13px;color:var(--cyan)}
+.plate-step .desc{color:var(--ink-faint);font-size:11px;font-family:'Departure Mono',monospace;letter-spacing:.1em}
+.plate-step .copy{
+  font-family:'Departure Mono',monospace;font-size:10px;
+  background:transparent;border:1px solid var(--line);padding:5px 10px;color:var(--ink-soft);
+  cursor:pointer;letter-spacing:.08em;transition:all .2s
+}
+.plate-step .copy:hover{border-color:var(--forge);color:var(--forge)}
+.plate-step .copy.ok{border-color:var(--safe);color:var(--safe)}
+
+/* --- footer --- */
+footer{
+  margin-top:120px;border-top:1px solid var(--line);
+  padding:42px 28px 32px;background:var(--paper-2)
+}
+.footer-in{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:flex-end}
+.foot-brand{font-family:'Departure Mono',monospace;font-size:12px;color:var(--ink-faint);letter-spacing:.1em;line-height:1.7}
+.foot-brand b{color:var(--ink)}
+.foot-links{display:flex;gap:24px;font-family:'Departure Mono',monospace;font-size:11px;letter-spacing:.12em}
+.foot-links a{color:var(--ink-soft);text-decoration:none;transition:color .2s}
+.foot-links a:hover{color:var(--forge)}
+
+/* --- mobile --- */
+@media (max-width: 960px){
+  .hero-grid{grid-template-columns:1fr;gap:24px}
+  .hero-right{max-width:380px;margin:0 auto}
+  h1{font-size:44px}
+  .spec-strip{grid-template-columns:repeat(2,1fr)}
+  .spec:nth-child(-n+2){border-bottom:1px solid var(--line)}
+  .spec:nth-child(2){border-right:none}
+  .process{grid-template-columns:1fr}
+  .process::before{display:none}
+  .forge-deck{grid-template-columns:1fr}
+  .title-block{display:none}
+  .bom-head,.bom-row{grid-template-columns:40px 80px 1fr 80px 90px}
+  .bom-head > div,.bom-row > div{padding:10px 8px;font-size:11px}
+  .heat-grid{grid-template-columns:repeat(16,1fr)}
+  .section{margin:60px auto}
+}
+</style>
 </head>
-<body class="grid-bg">
-  <div class="scanline"></div>
+<body>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-left">
-      <span class="logo">SOLANA_TEST_FORGE</span>
-      <span class="status-badge">v0.1.0</span>
-    </div>
-    <div class="header-right">
-      <a href="#demo" class="header-link">Live Demo</a>
-      <a href="#quickstart" class="header-link">Quick Start</a>
-      <button class="install-btn" onclick="navigator.clipboard.writeText('npx solanatestforge')">npm i solanatestforge</button>
-    </div>
-  </header>
+<div class="reticle" id="reticle"><span></span><i></i></div>
 
-  <!-- Hero -->
-  <section class="hero">
-    <h1>SolanaTestForge</h1>
-    <p>Fork devnet state. Scan for vulnerabilities. Fuzz with random inputs. Ship secure Solana programs.</p>
-    <div class="hero-cmd" id="heroCmdBox" style="cursor:pointer;display:inline-flex;align-items:center;gap:14px" onclick="copyHeroCmd()">
-      <span><span class="prompt">$ </span>solforge security ./target/idl/my_program.json</span>
-      <span class="hero-cmd-icon" id="heroCmdIcon">
-        <svg id="iconCopy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.35;transition:all 0.2s">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-        </svg>
-        <svg id="iconCheck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      </span>
-    </div>
-  </section>
+<!-- global ambient scan beam -->
+<div class="ambient-beam"></div>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value">7</div>
-      <div class="stat-label">Security Rules</div>
+<!-- title block bottom-right -->
+<div class="title-block">
+  <div class="row"><div class="k">PROJECT</div><div class="v">SOL-TEST-FORGE</div></div>
+  <div class="row"><div class="k">DRAWING</div><div class="v">DWG-042 REV.A</div></div>
+  <div class="row"><div class="k">SCALE</div><div class="v">1:1 · NTS</div></div>
+  <div class="row"><div class="k">NETWORK</div><div class="v hot">DEVNET</div></div>
+  <div class="row"><div class="k">STATUS</div><div class="v">COMPILED</div></div>
+</div>
+
+<nav>
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 30 30" width="30" height="30">
+        <rect x="3" y="3" width="24" height="24" stroke="#49d4ff" stroke-width="1.2" fill="none"/>
+        <path d="M8 22 L15 8 L22 22 Z" stroke="#ff8a3d" stroke-width="1.5" fill="rgba(255,138,61,.15)"/>
+        <circle cx="15" cy="18" r="2" fill="#ff8a3d"/>
+        <line x1="15" y1="3" x2="15" y2="6" stroke="#49d4ff" stroke-width="1"/>
+        <line x1="15" y1="24" x2="15" y2="27" stroke="#49d4ff" stroke-width="1"/>
+      </svg>
     </div>
-    <div class="stat">
-      <div class="stat-value">1,000</div>
-      <div class="stat-label">Fuzz Iterations</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">2</div>
-      <div class="stat-label">Networks</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">&lt;5s</div>
-      <div class="stat-label">Scan Time</div>
+    <div>
+      <div class="brand-name">SOLANA <b>TEST:FORGE</b></div>
+      <div style="font-size:9px;color:var(--ink-faint);letter-spacing:.15em;margin-top:2px" class="mono">TOOLKIT FOR ANCHOR/.IDL</div>
     </div>
   </div>
+  <div class="nav-links">
+    <div class="rev-stamp">DWG-042 · REV.A</div>
+    <a href="#process">Process</a>
+    <a href="#bom">Rules</a>
+    <a href="#forge">Live Forge</a>
+    <a href="#install">Install</a>
+    <button class="nav-cta" onclick="document.getElementById('forge').scrollIntoView({behavior:'smooth'})">RUN_FORGE ↗</button>
+  </div>
+</nav>
 
-  <!-- Capabilities -->
-  <div class="capabilities">
-    <div class="cap-card">
-      <div class="cap-icon">&#x1f50d;</div>
-      <div class="cap-title">Fork Engine</div>
-      <div class="cap-desc">Snapshot program accounts from devnet or mainnet. Test against real on-chain state without deploying.</div>
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid">
+    <div class="hero-left">
+      <div class="breadcrumb"><span class="dot"></span><span>SECTION A–A'</span><span>/</span><span>TOOLCHAIN</span><span>/</span><span>SECURITY</span></div>
+      <h1>Forge<br><span class="hot">safer</span> Solana<br><span class="cy">programs.</span></h1>
+      <p class="sub">A blueprint-driven test framework. <em>Fork</em> live devnet state, <em>scan</em> IDLs against 7 security rules, and <em>fuzz</em> with a thousand random inputs — all before a single byte ever touches mainnet.</p>
+      <div class="cta-row">
+        <button class="cta-primary" onclick="runAll()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 3 L20 12 L6 21 Z"/></svg>
+          START FORGE
+        </button>
+        <button class="cta-secondary" onclick="copyInstall(this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="txt">$ npm i -g solanatestforge</span>
+          <span class="ok">✓ copied</span>
+        </button>
+      </div>
     </div>
-    <div class="cap-card">
-      <div class="cap-icon">&#x1f6e1;</div>
-      <div class="cap-title">Security Scanner</div>
-      <div class="cap-desc">7 IDL-based checks: missing signers, unchecked owners, arithmetic overflow, reinitialization, CPI authority, rent exemption.</div>
-    </div>
-    <div class="cap-card">
-      <div class="cap-icon">&#x1f9ea;</div>
-      <div class="cap-title">Fuzz Tester</div>
-      <div class="cap-desc">Random input generation with boundary injection. Finds crashes, overflows, and invariant violations automatically.</div>
+
+    <div class="hero-right">
+      <div class="bp-label tl">BP-001 · ANCHOR PROGRAM SCHEMATIC</div>
+      <div class="bp-label tr">SCALE 1:1</div>
+      <div class="bp-label bl">PLATE A</div>
+      <div class="bp-label br">● HEAT ZONES: 3</div>
+      <svg viewBox="0 0 400 400" class="blueprint">
+        <defs>
+          <pattern id="bp-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" class="grid-line"/>
+          </pattern>
+          <marker id="arrow-c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#49d4ff"/>
+          </marker>
+          <marker id="arrow-o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ff8a3d"/>
+          </marker>
+        </defs>
+        <rect x="0" y="0" width="400" height="400" fill="url(#bp-grid)"/>
+
+        <!-- outer frame -->
+        <rect x="10" y="10" width="380" height="380" class="g-line dashed"/>
+        <line x1="10" y1="50" x2="390" y2="50" class="g-line"/>
+        <line x1="10" y1="350" x2="390" y2="350" class="g-line"/>
+
+        <!-- dimensions top -->
+        <text x="200" y="32" class="dim" text-anchor="middle">ANCHOR PROGRAM · forexforsoul · 8 IX</text>
+        <text x="200" y="370" class="dim" text-anchor="middle">— SECTION CUT A–A' —</text>
+
+        <!-- central instruction node -->
+        <g class="node d1">
+          <rect x="140" y="160" width="120" height="70" rx="3"/>
+          <text x="200" y="186" text-anchor="middle">open_position</text>
+          <text x="200" y="204" text-anchor="middle" class="sub">fn instruction</text>
+          <text x="200" y="220" text-anchor="middle" class="sub">ctx, size, side</text>
+        </g>
+
+        <!-- accounts left -->
+        <g class="node d2">
+          <rect x="20" y="120" width="100" height="44" rx="3"/>
+          <text x="70" y="138" text-anchor="middle">Account</text>
+          <text x="70" y="154" text-anchor="middle" class="sub">user: Signer</text>
+        </g>
+        <g class="node d2 hot">
+          <rect x="20" y="180" width="100" height="44" rx="3"/>
+          <text x="70" y="198" text-anchor="middle">Account</text>
+          <text x="70" y="214" text-anchor="middle" class="sub">authority: ✕</text>
+        </g>
+        <g class="node d2">
+          <rect x="20" y="240" width="100" height="44" rx="3"/>
+          <text x="70" y="258" text-anchor="middle">PDA</text>
+          <text x="70" y="274" text-anchor="middle" class="sub">position</text>
+        </g>
+
+        <!-- CPIs right -->
+        <g class="node d3">
+          <rect x="280" y="120" width="100" height="44" rx="3"/>
+          <text x="330" y="138" text-anchor="middle">CPI</text>
+          <text x="330" y="154" text-anchor="middle" class="sub">token::xfer</text>
+        </g>
+        <g class="node d3 hot">
+          <rect x="280" y="180" width="100" height="44" rx="3"/>
+          <text x="330" y="198" text-anchor="middle">CPI</text>
+          <text x="330" y="214" text-anchor="middle" class="sub">price::oracle</text>
+        </g>
+        <g class="node d3">
+          <rect x="280" y="240" width="100" height="44" rx="3"/>
+          <text x="330" y="258" text-anchor="middle">vault</text>
+          <text x="330" y="274" text-anchor="middle" class="sub">PublicKey</text>
+        </g>
+
+        <!-- connections -->
+        <path d="M120,142 Q140,170 140,180" class="n-line" marker-end="url(#arrow-c)"/>
+        <path d="M120,202 Q140,200 140,200" class="n-line d2" marker-end="url(#arrow-o)"/>
+        <path d="M120,262 Q140,230 140,216" class="n-line d2" marker-end="url(#arrow-c)"/>
+        <path d="M260,195 Q280,180 280,142" class="n-line d3" marker-end="url(#arrow-c)"/>
+        <path d="M260,200 Q280,200 280,200" class="n-line d3" marker-end="url(#arrow-o)"/>
+        <path d="M260,210 Q280,230 280,262" class="n-line d3" marker-end="url(#arrow-c)"/>
+
+        <!-- crosshair marker on hot -->
+        <g class="node d4">
+          <line x1="60" y1="192" x2="80" y2="212" class="crosshair"/>
+          <line x1="80" y1="192" x2="60" y2="212" class="crosshair"/>
+          <circle cx="70" cy="202" r="14" fill="none" stroke="#ff8a3d" stroke-width="1" stroke-dasharray="2 2"/>
+          <circle cx="70" cy="202" r="4" class="scan-ring"/>
+          <text x="70" y="108" text-anchor="middle" class="dim" fill="#ff8a3d">CRITICAL: missing-signer</text>
+        </g>
+
+        <!-- moving scan beam -->
+        <g class="node d1" style="transform-origin:center">
+          <line x1="20" y1="200" x2="380" y2="200" class="scan-beam"/>
+        </g>
+
+        <!-- data flow dots -->
+        <g class="node d4">
+          <circle class="flow-dot" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" path="M120,142 Q140,170 140,180"/>
+          </circle>
+          <circle class="flow-dot" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" begin="0.4s" path="M120,262 Q140,230 140,216"/>
+          </circle>
+          <circle class="flow-dot o" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" path="M260,195 Q280,180 280,142"/>
+          </circle>
+          <circle class="flow-dot o" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" begin="0.6s" path="M260,210 Q280,230 280,262"/>
+          </circle>
+          <circle class="flow-dot" r="2.5">
+            <animateMotion dur="2.6s" repeatCount="indefinite" begin="1.2s" path="M260,200 Q280,200 280,200"/>
+          </circle>
+        </g>
+
+        <!-- dimension bracket bottom -->
+        <g class="node d5">
+          <line x1="20" y1="310" x2="380" y2="310" stroke="#4a6178" stroke-width="1"/>
+          <line x1="20" y1="306" x2="20" y2="314" stroke="#4a6178" stroke-width="1"/>
+          <line x1="380" y1="306" x2="380" y2="314" stroke="#4a6178" stroke-width="1"/>
+          <text x="200" y="326" text-anchor="middle" class="dim">1,000 FUZZ ITERATIONS · 25 CRASH · 32 FINDINGS</text>
+        </g>
+      </svg>
     </div>
   </div>
+</section>
 
-  <!-- Scanner Demo -->
-  <section class="scanner-section" id="demo">
-    <div class="scanner-title">
-      <span class="dot"></span> LIVE SCAN DEMO
+<!-- SPEC STRIP -->
+<div class="spec-strip">
+  <div class="spec">
+    <div class="spec-k">RULES</div>
+    <div class="spec-v"><span class="n" data-count="7" data-pad="2">00</span><span class="u">checks</span></div>
+    <div class="spec-d">IDL-based static analysis</div>
+  </div>
+  <div class="spec">
+    <div class="spec-k">FUZZ</div>
+    <div class="spec-v"><span class="n" data-count="1000" data-commas="1">0</span><span class="u">iters</span></div>
+    <div class="spec-d">boundary + random inputs</div>
+  </div>
+  <div class="spec">
+    <div class="spec-k">FORK</div>
+    <div class="spec-v"><span class="n" data-count="2" data-prefix="&lt;" data-suffix="s">0</span><span class="u">avg</span></div>
+    <div class="spec-d">devnet · mainnet snapshot</div>
+  </div>
+  <div class="spec">
+    <div class="spec-k">FOOTPRINT</div>
+    <div class="spec-v"><span class="n" data-count="0">0</span><span class="u">sol</span></div>
+    <div class="spec-d">no deploys · local-only</div>
+  </div>
+</div>
+
+<!-- PROCESS -->
+<section class="section" id="process">
+  <div class="section-head">
+    <div>
+      <div class="section-tag"><b>§ 01</b><span class="bar"></span><span>HEAT LIFECYCLE</span></div>
+      <h2 class="section-title">Three stages, one <span class="cy">cooled</span> artifact.</h2>
     </div>
-
-    <div class="target-bar">
-      <span class="target-label">Target</span>
-      <span class="target-value">ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</span>
-      <button class="scan-btn" id="runAllBtn" onclick="runAllScans()">Run All Scans</button>
-    </div>
-
-    <div class="results-grid">
-      <!-- Fork Panel -->
-      <div class="result-panel" id="panel-fork" onclick="togglePanel('fork')">
-        <div class="result-header">
-          <div class="result-header-left">
-            <span class="result-status idle" id="status-fork">READY</span>
-            <span class="result-name">Fork Engine</span>
-          </div>
-          <div>
-            <span class="result-meta" id="meta-fork">devnet snapshot</span>
-            <span class="result-chevron">&#9654;</span>
-          </div>
-        </div>
-        <div class="progress-container" id="progress-fork">
-          <div class="progress-bar"><div class="progress-fill" id="fill-fork"></div></div>
-          <div class="progress-label" id="plabel-fork">Initializing...</div>
-        </div>
-        <div class="result-body">
-          <div class="terminal" id="term-fork"></div>
-        </div>
-      </div>
-
-      <!-- Security Panel -->
-      <div class="result-panel" id="panel-security" onclick="togglePanel('security')">
-        <div class="result-header">
-          <div class="result-header-left">
-            <span class="result-status idle" id="status-security">READY</span>
-            <span class="result-name">Security Scanner</span>
-          </div>
-          <div>
-            <span class="result-meta" id="meta-security">7 checks</span>
-            <span class="result-chevron">&#9654;</span>
-          </div>
-        </div>
-        <div class="progress-container" id="progress-security">
-          <div class="progress-bar"><div class="progress-fill" id="fill-security"></div></div>
-          <div class="progress-label" id="plabel-security">Initializing...</div>
-        </div>
-        <div class="result-body">
-          <div class="terminal" id="term-security"></div>
-        </div>
-      </div>
-
-      <!-- Fuzz Panel -->
-      <div class="result-panel" id="panel-fuzz" onclick="togglePanel('fuzz')">
-        <div class="result-header">
-          <div class="result-header-left">
-            <span class="result-status idle" id="status-fuzz">READY</span>
-            <span class="result-name">Fuzz Tester</span>
-          </div>
-          <div>
-            <span class="result-meta" id="meta-fuzz">1000 iterations</span>
-            <span class="result-chevron">&#9654;</span>
-          </div>
-        </div>
-        <div class="progress-container" id="progress-fuzz">
-          <div class="progress-bar"><div class="progress-fill" id="fill-fuzz"></div></div>
-          <div class="progress-label" id="plabel-fuzz">Initializing...</div>
-        </div>
-        <div class="result-body">
-          <div class="terminal" id="term-fuzz"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Quick Start -->
-  <section class="quickstart" id="quickstart">
-    <div class="qs-title">Quick Start</div>
-    <div class="qs-block">
-      <span class="comment"># Install</span><br>
-      <span class="cmd">npm install -g solanatestforge</span><br><br>
-      <span class="comment"># Fork devnet state</span><br>
-      <span class="cmd">solforge fork devnet &lt;PROGRAM_ID&gt;</span><br><br>
-      <span class="comment"># Run security scan</span><br>
-      <span class="cmd">solforge security ./target/idl/my_program.json</span><br><br>
-      <span class="comment"># Fuzz test</span><br>
-      <span class="cmd">solforge fuzz ./target/idl/my_program.json</span><br>
-    </div>
-  </section>
-
-  <div class="footer">
-    Built for Solana. Open source. <a href="#">GitHub</a>
+    <div class="section-lede">Your program enters <b style="color:var(--cyan)">cold</b> as raw bytes. By the time it leaves the forge it has been quenched against every rule in the spec — ready to mainnet.</div>
   </div>
 
-  <script>
-    function copyHeroCmd() {
-      navigator.clipboard.writeText('solforge security ./target/idl/my_program.json');
-      const copy = document.getElementById('iconCopy');
-      const check = document.getElementById('iconCheck');
-      copy.style.display = 'none';
-      check.style.display = 'block';
-      check.classList.remove('check-anim');
-      void check.offsetWidth;
-      check.classList.add('check-anim');
-      setTimeout(() => {
-        check.style.display = 'none';
-        check.classList.remove('check-anim');
-        copy.style.display = 'block';
-      }, 1800);
+  <div class="process">
+    <div class="step">
+      <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+      <div class="step-num cool">01</div>
+      <div class="step-title">Fork state</div>
+      <div class="step-desc">Snapshot any program's accounts from a live cluster in one call. Every test runs against the real on-chain shape — no fixtures, no drift.</div>
+      <div class="step-cmd"><span class="d">$</span> solforge fork devnet &lt;PID&gt;</div>
+    </div>
+    <div class="step">
+      <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+      <div class="step-num warm">02</div>
+      <div class="step-title">Scan IDL</div>
+      <div class="step-desc">Seven static rules inspect signer roles, account ownership, arithmetic, rent, CPI authority and reinit windows. Severity-ranked. Machine-readable JSON.</div>
+      <div class="step-cmd"><span class="d">$</span> solforge security ./idl.json</div>
+    </div>
+    <div class="step">
+      <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+      <div class="step-num hot">03</div>
+      <div class="step-title">Fuzz hot</div>
+      <div class="step-desc">Boundary-aware random inputs stress every instruction. Overflows, div-by-zero, invariant breaks, UB — all surfaced before the deploy button.</div>
+      <div class="step-cmd"><span class="d">$</span> solforge fuzz ./idl.json -n 1000</div>
+    </div>
+  </div>
+</section>
+
+<!-- BOM -->
+<section class="section" id="bom">
+  <div class="section-head">
+    <div>
+      <div class="section-tag"><b>§ 02</b><span class="bar"></span><span>BILL OF MATERIALS</span></div>
+      <h2 class="section-title">Security rules, <span class="cy">itemised</span>.</h2>
+    </div>
+    <div class="section-lede">Every forge check is a part with a spec. Here are the seven items in the standard toolkit — with severity bands and applicable IDL surface.</div>
+  </div>
+
+  <div class="bom">
+    <div class="bom-head">
+      <div>ITEM</div><div>PART NO.</div><div>DESCRIPTION</div><div>SEVERITY</div><div>SURFACE</div>
+    </div>
+    <div class="bom-row hot">
+      <div class="idx">001</div>
+      <div class="part">MIS-SIGN</div>
+      <div class="desc">Missing signer constraint<span class="d">flags authority-shaped accounts declared without the Signer&lt;'info&gt; wrapper</span></div>
+      <div class="sev crit">◆ CRITICAL</div>
+      <div class="tol">ACCOUNTS[*]</div>
+    </div>
+    <div class="bom-row hot">
+      <div class="idx">002</div>
+      <div class="part">UNCHK-OWN</div>
+      <div class="desc">Unchecked account owner<span class="d">detects Account&lt;T&gt; used as UncheckedAccount without owner = crate::ID</span></div>
+      <div class="sev crit">◆ CRITICAL</div>
+      <div class="tol">ACCOUNTS[*]</div>
+    </div>
+    <div class="bom-row hot">
+      <div class="idx">003</div>
+      <div class="part">ARITH-OVF</div>
+      <div class="desc">Arithmetic overflow<span class="d">raw +/-/* on u64/u128 without checked_* or overflow-checks on</span></div>
+      <div class="sev high">◇ HIGH</div>
+      <div class="tol">HANDLERS[*]</div>
+    </div>
+    <div class="bom-row">
+      <div class="idx">004</div>
+      <div class="part">REINIT</div>
+      <div class="desc">Account re-initialization<span class="d">init on mutable target without close/realloc guard</span></div>
+      <div class="sev high">◇ HIGH</div>
+      <div class="tol">INIT[*]</div>
+    </div>
+    <div class="bom-row">
+      <div class="idx">005</div>
+      <div class="part">CPI-AUTH</div>
+      <div class="desc">CPI authority bypass<span class="d">CPI call signed by wrong seed; PDA derived with user input unchecked</span></div>
+      <div class="sev high">◇ HIGH</div>
+      <div class="tol">CPI[*]</div>
+    </div>
+    <div class="bom-row">
+      <div class="idx">006</div>
+      <div class="part">RENT-EX</div>
+      <div class="desc">Rent exemption drain<span class="d">close = x without assertion on remaining_lamports after transfer</span></div>
+      <div class="sev med">○ MEDIUM</div>
+      <div class="tol">CLOSE[*]</div>
+    </div>
+    <div class="bom-row">
+      <div class="idx">007</div>
+      <div class="part">PDA-BUMP</div>
+      <div class="desc">Canonical bump drift<span class="d">non-canonical bump reused across instructions; missing stored bump field</span></div>
+      <div class="sev med">○ MEDIUM</div>
+      <div class="tol">PDA[*]</div>
+    </div>
+  </div>
+</section>
+
+<!-- HEAT MAP -->
+<section class="section">
+  <div class="section-head">
+    <div>
+      <div class="section-tag"><b>§ 03</b><span class="bar"></span><span>COVERAGE HEATMAP</span></div>
+      <h2 class="section-title">Watch the <span class="cy">metal</span> turn orange.</h2>
+    </div>
+    <div class="section-lede">288 instruction · input permutations per run. Each cell tracks one fuzz case — blue means cold path, orange means hit, red means crash.</div>
+  </div>
+
+  <div class="heat-wrap">
+    <div class="heat-head">
+      <div class="heat-label">FUZZ RUN · <b>forexforsoul.open_position</b> · iter 0 → 288</div>
+      <button class="heat-btn" id="heatBtn" onclick="igniteHeat()">◉ IGNITE FORGE</button>
+    </div>
+    <div class="heat-grid" id="heatGrid"></div>
+    <div class="heat-legend">
+      <span><span class="sw" style="background:rgba(30,60,92,.4)"></span>not reached</span>
+      <span><span class="sw" style="background:rgba(73,212,255,.25)"></span>cold path</span>
+      <span><span class="sw" style="background:rgba(255,200,102,.55)"></span>exercised</span>
+      <span><span class="sw" style="background:rgba(255,138,61,.8)"></span>hot</span>
+      <span><span class="sw" style="background:#ff5a1f"></span>boundary</span>
+      <span><span class="sw" style="background:var(--fail)"></span>crash</span>
+    </div>
+    <div class="heat-stats">
+      <div><div class="heat-stat-k">ITERATIONS</div><div class="heat-stat-v" id="h-it">0</div></div>
+      <div><div class="heat-stat-k">PASS</div><div class="heat-stat-v safe" id="h-ok">0</div></div>
+      <div><div class="heat-stat-k">CRASH</div><div class="heat-stat-v fail" id="h-cr">0</div></div>
+      <div><div class="heat-stat-k">BOUNDARIES HIT</div><div class="heat-stat-v warm" id="h-bd">0</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE FORGE (terminal) -->
+<section class="section" id="forge">
+  <div class="section-head">
+    <div>
+      <div class="section-tag"><b>§ 04</b><span class="bar"></span><span>LIVE FORGE</span></div>
+      <h2 class="section-title">Hammer it on a <span class="cy">real</span> program.</h2>
+    </div>
+    <div class="section-lede">Target is pinned to <span class="mono" style="color:var(--cyan)">ERSbyEx6…y8ro</span> — the live Forex-for-Soul perpetuals program on devnet. Pick a stage and click run.</div>
+  </div>
+
+  <div class="forge-deck">
+    <div class="forge-side">
+      <div class="forge-tab active" data-tab="fork" onclick="selectTab('fork')">
+        <div class="forge-tab-num">1</div>
+        <div class="forge-tab-body">
+          <div class="forge-tab-t">Fork engine</div>
+          <div class="forge-tab-s">snapshot · 5 accts · 2s</div>
+        </div>
+      </div>
+      <div class="forge-tab" data-tab="security" onclick="selectTab('security')">
+        <div class="forge-tab-num">2</div>
+        <div class="forge-tab-body">
+          <div class="forge-tab-t">Security scanner</div>
+          <div class="forge-tab-s">7 rules · 3 critical</div>
+        </div>
+      </div>
+      <div class="forge-tab" data-tab="fuzz" onclick="selectTab('fuzz')">
+        <div class="forge-tab-num">3</div>
+        <div class="forge-tab-body">
+          <div class="forge-tab-t">Fuzz hammer</div>
+          <div class="forge-tab-s">1000 iter · 25 crash</div>
+        </div>
+      </div>
+      <button class="heat-btn" style="margin-top:auto" onclick="runAll()">▶ RUN ENTIRE PIPELINE</button>
+    </div>
+
+    <div class="forge-screen">
+      <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+      <div class="forge-bar">
+        <span>sol-test-forge://stage/<b id="stageLabel" style="color:var(--forge)">fork</b></span>
+        <span class="r"><span class="forge-dot" id="stageDot"></span><span id="stageState">IDLE</span></span>
+      </div>
+      <div class="forge-body" id="forgeBody">
+<span class="p"># select a stage on the left, or hit RUN ENTIRE PIPELINE</span>
+<span class="p"># target: ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</span>
+<span class="p"># cluster: https://api.devnet.solana.com</span>
+
+$ <span class="cmd">solforge --help</span>
+<span class="w">sol-test-forge 0.1.0</span>   an engineer's toolkit for safer anchor programs
+<span class="w">USAGE</span>   solforge &lt;command&gt; [options]
+<span class="w">COMMANDS</span>
+  fork       snapshot program accounts from a cluster
+  security   static scan of IDL against security rules
+  fuzz       boundary-aware random input hammering
+  report     export json/markdown/html
+<span class="p">            ready.</span><span class="cursor"></span>
+      </div>
+      <div class="sparks" id="sparks"></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section class="section">
+  <div class="section-head">
+    <div>
+      <div class="section-tag"><b>§ 05</b><span class="bar"></span><span>TOOL COMPARISON</span></div>
+      <h2 class="section-title">Why roll a <span class="cy">dedicated</span> forge?</h2>
+    </div>
+    <div class="section-lede">The rest of the Solana toolchain runs tests. Few of them inspect, fewer fuzz, and none snapshot real state without deploying. Here's where each sits.</div>
+  </div>
+
+  <div class="compare">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>anchor test</th>
+          <th>bankrun</th>
+          <th>local-validator</th>
+          <th class="col-us" style="color:var(--forge)">test:forge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>live-state fork</td>
+          <td class="bad">— none</td>
+          <td class="meh">partial</td>
+          <td class="bad">manual rpc</td>
+          <td class="col-us ok">✓ snapshot</td>
+        </tr>
+        <tr>
+          <td>idl security scan</td>
+          <td class="bad">— none</td>
+          <td class="bad">— none</td>
+          <td class="bad">— none</td>
+          <td class="col-us ok">✓ 7 rules</td>
+        </tr>
+        <tr>
+          <td>boundary fuzzer</td>
+          <td class="bad">manual ts</td>
+          <td class="bad">manual ts</td>
+          <td class="bad">manual ts</td>
+          <td class="col-us ok">✓ 1000 iter</td>
+        </tr>
+        <tr>
+          <td>zero sol / no deploy</td>
+          <td class="bad">deploys</td>
+          <td class="ok">✓</td>
+          <td class="bad">deploys</td>
+          <td class="col-us ok">✓</td>
+        </tr>
+        <tr>
+          <td>ci-friendly report</td>
+          <td class="meh">tap only</td>
+          <td class="meh">tap only</td>
+          <td class="bad">— none</td>
+          <td class="col-us ok">✓ json/md/html</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- INSTALL PLATE -->
+<section class="section" id="install">
+  <div class="plate">
+    <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+    <div class="plate-title">INSTALL / QUICK START</div>
+    <div class="plate-sub">Node 18+ · no rust toolchain required · zero config.</div>
+
+    <div class="plate-steps">
+      <div class="plate-step">
+        <div class="n">01</div>
+        <div><code>npm install -g solanatestforge</code><br><span class="desc">install · ~5 mb</span></div>
+        <button class="copy" onclick="plateCopy(this,'npm install -g solanatestforge')">COPY</button>
+      </div>
+      <div class="plate-step">
+        <div class="n">02</div>
+        <div><code>solforge fork devnet ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</code><br><span class="desc">snapshot live accounts · ≤ 2s</span></div>
+        <button class="copy" onclick="plateCopy(this,'solforge fork devnet ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro')">COPY</button>
+      </div>
+      <div class="plate-step">
+        <div class="n">03</div>
+        <div><code>solforge security ./target/idl/my_program.json</code><br><span class="desc">7 rules · severity-ranked</span></div>
+        <button class="copy" onclick="plateCopy(this,'solforge security ./target/idl/my_program.json')">COPY</button>
+      </div>
+      <div class="plate-step">
+        <div class="n">04</div>
+        <div><code>solforge fuzz ./target/idl/my_program.json --iterations 1000</code><br><span class="desc">boundary + random · crash report</span></div>
+        <button class="copy" onclick="plateCopy(this,'solforge fuzz ./target/idl/my_program.json --iterations 1000')">COPY</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-in">
+    <div class="foot-brand">
+      <b>SOL-TEST-FORGE</b> · dwg-042 rev.a<br>
+      forged for anchor / node 18+ · devnet &amp; mainnet-beta<br>
+      <span style="color:var(--ink-faint)">© mmxxvi · open source · mit licence</span>
+    </div>
+    <div class="foot-links">
+      <a href="#process">PROCESS</a>
+      <a href="#bom">BOM</a>
+      <a href="#forge">LIVE</a>
+      <a href="#install">INSTALL</a>
+      <a href="https://github.com/" target="_blank" rel="noreferrer">GITHUB ↗</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ==================== RETICLE ==================== */
+const reticle = document.getElementById('reticle');
+const hotZones = ['.hero-right', '.heat-wrap', '.forge-screen', '.blueprint'];
+document.addEventListener('mousemove', (e)=>{
+  reticle.style.left = e.clientX + 'px';
+  reticle.style.top = e.clientY + 'px';
+  const inZone = hotZones.some(s => e.target.closest(s));
+  reticle.classList.toggle('on', inZone);
+});
+
+/* ==================== COPY ==================== */
+function copyInstall(btn){
+  navigator.clipboard.writeText('npm install -g solanatestforge');
+  btn.classList.add('copied');
+  setTimeout(()=>btn.classList.remove('copied'), 1800);
+}
+function plateCopy(btn, cmd){
+  navigator.clipboard.writeText(cmd);
+  const old = btn.textContent;
+  btn.textContent = 'COPIED ✓';
+  btn.classList.add('ok');
+  setTimeout(()=>{btn.textContent = old; btn.classList.remove('ok')}, 1500);
+}
+
+/* ==================== HEAT MAP ==================== */
+const heatGrid = document.getElementById('heatGrid');
+const HEAT_COLS = 24, HEAT_ROWS = 12;
+const TOTAL = HEAT_COLS * HEAT_ROWS;
+for (let i=0; i<TOTAL; i++){
+  const c = document.createElement('div');
+  c.className = 'heat-cell';
+  heatGrid.appendChild(c);
+}
+let heatRunning = false;
+async function igniteHeat(){
+  if (heatRunning) return;
+  heatRunning = true;
+  const btn = document.getElementById('heatBtn');
+  btn.classList.add('running');
+  btn.textContent = '◉ FORGING...';
+  const cells = heatGrid.children;
+  for (let i=0; i<cells.length; i++) cells[i].className = 'heat-cell';
+  const hIt = document.getElementById('h-it'),
+        hOk = document.getElementById('h-ok'),
+        hCr = document.getElementById('h-cr'),
+        hBd = document.getElementById('h-bd');
+  let ok=0, cr=0, bd=0;
+  const order = Array.from({length:TOTAL}, (_,i)=>i).sort(()=>Math.random()-0.5);
+  for (let step=0; step<TOTAL; step++){
+    const idx = order[step];
+    const cell = cells[idx];
+    const r = Math.random();
+    let cls;
+    if (r < 0.08) { cls='fail'; cr++; }
+    else if (r < 0.18) { cls='c4'; bd++; ok++; }
+    else if (r < 0.40) { cls='c3'; ok++; }
+    else if (r < 0.72) { cls='c2'; ok++; }
+    else { cls='c1'; ok++; }
+    cell.classList.add(cls);
+    hIt.textContent = step+1;
+    hOk.textContent = ok;
+    hCr.textContent = cr;
+    hBd.textContent = bd;
+    if (step % 3 === 0) await new Promise(r=>setTimeout(r, 6));
+  }
+  btn.classList.remove('running');
+  btn.textContent = '◉ IGNITE FORGE';
+  heatRunning = false;
+}
+
+/* ==================== LIVE FORGE TERMINAL ==================== */
+const stages = {
+  fork: {
+    label: 'fork',
+    lines: [
+      ['cmd', '$ solforge fork devnet ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro'],
+      ['p', 'connecting   → api.devnet.solana.com'],
+      ['p', 'fetching     → getProgramAccounts'],
+      ['g', '[■■■■■■■■■■■■■■■■■■■■] 100%  5/5 accts · 1,280 bytes'],
+      ['', ''],
+      ['w', '  ACCT  TYPE          BYTES   SLOT'],
+      ['p', '  ────  ────────────  ──────  ──────────'],
+      ['w', '  01    Exchange       232    455,258,642'],
+      ['w', '  02    TradingPair    284    455,258,642'],
+      ['w', '  03    TradingPair    284    455,258,642'],
+      ['w', '  04    TradingPair    284    455,258,642'],
+      ['w', '  05    DataProvider   196    455,258,642'],
+      ['', ''],
+      ['p', 'snapshot     → .solforge/fork_ERSbyEx6_455258642.json'],
+      ['g', '✓ fork complete · 1.87 s · state frozen'],
+    ]
+  },
+  security: {
+    label: 'security',
+    lines: [
+      ['cmd', '$ solforge security ./target/idl/forexforsoul.json'],
+      ['p', 'loading      → forexforsoul.json · 8 instructions'],
+      ['p', 'running 7 rules ...'],
+      ['', ''],
+      ['w', '╔═══ SECURITY REPORT · forexforsoul ═══'],
+      ['', ''],
+      ['r', '  ◆ CRITICAL  missing-signer'],
+      ['p', '    `authority` is used as authority but not a Signer'],
+      ['p', '    ix: add_trading_pair   account: authority'],
+      ['', ''],
+      ['r', '  ◆ CRITICAL  missing-signer'],
+      ['p', '    `authority` is not a Signer<\'info>'],
+      ['p', '    ix: initialize_exchange   account: authority'],
+      ['', ''],
+      ['r', '  ◆ CRITICAL  missing-signer'],
+      ['p', '    `authority` is not a Signer<\'info>'],
+      ['p', '    ix: update_price   account: authority'],
+      ['', ''],
+      ['w', '╟─── SUMMARY ───'],
+      ['r', '  FAIL  missing-signer         3 issues'],
+      ['g', '  PASS  unchecked-owner'],
+      ['g', '  PASS  arithmetic-overflow'],
+      ['g', '  PASS  reinitialization'],
+      ['g', '  PASS  cpi-authority'],
+      ['g', '  PASS  rent-exemption'],
+      ['g', '  PASS  pda-bump'],
+      ['', ''],
+      ['r', '✕ 1 failed'] ,
+      ['p', '  6 passed · 7 total · 0.42 s'],
+    ]
+  },
+  fuzz: {
+    label: 'fuzz',
+    lines: [
+      ['cmd', '$ solforge fuzz ./target/idl/forexforsoul.json -n 1000'],
+      ['p', 'generating inputs · boundary-aware · seed 0x42f3'],
+      ['o', '[■■■■■■■■■■■■■■■■■■■■] 1000/1000 · 4.28s'],
+      ['', ''],
+      ['w', '  METRIC       VALUE'],
+      ['p', '  ────────     ─────────'],
+      ['w', '  iterations   1,000'],
+      ['g', '  passed       975'],
+      ['r', '  crashes      25'],
+      ['p', '  timeouts     0'],
+      ['y', '  findings     32'],
+      ['', ''],
+      ['w', '╟─── CRASH DIGEST ───'],
+      ['r', '  ▸ iter 20   u64::MAX shares · withdraw_liquidity   → overflow'],
+      ['r', '  ▸ iter 44   size = -1 · open_position              → underflow'],
+      ['r', '  ▸ iter 58   u64::MAX price · update_price          → overflow'],
+      ['y', '  ▸ iter 216  amount = 0 · deposit_liquidity         → div/zero'],
+      ['r', '  ▸ iter 319  u64::MAX size · open_position          → overflow'],
+      ['p', '  ... 27 additional findings suppressed (use -v to expand)'],
+      ['', ''],
+      ['r', '✕ 25 crashes '],
+      ['y', '⚠ 32 findings '],
+      ['g', '✓ hammer released · report written to .solforge/fuzz.html'],
+    ]
+  }
+};
+
+const forgeBody = document.getElementById('forgeBody');
+const stageDot = document.getElementById('stageDot');
+const stageState = document.getElementById('stageState');
+const stageLabel = document.getElementById('stageLabel');
+let currentTab = 'fork';
+let typing = false;
+
+function selectTab(name){
+  if (typing) return;
+  currentTab = name;
+  document.querySelectorAll('.forge-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  stageLabel.textContent = stages[name].label;
+  runStage(name);
+}
+
+async function runStage(name){
+  if (typing) return;
+  typing = true;
+  stageDot.classList.add('live');
+  stageState.textContent = 'RUNNING';
+  forgeBody.innerHTML = '';
+  burstSparks();
+  const lines = stages[name].lines;
+  for (const [cls, txt] of lines){
+    if (txt === ''){
+      forgeBody.innerHTML += '\n';
+    } else {
+      const safe = txt.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      forgeBody.innerHTML += `<span class="${cls}">${safe}</span>\n`;
     }
+    forgeBody.scrollTop = forgeBody.scrollHeight;
+    await new Promise(r=>setTimeout(r, 40 + Math.random()*60));
+  }
+  forgeBody.innerHTML += `<span class="p">            ready.</span><span class="cursor"></span>`;
+  stageDot.classList.remove('live');
+  stageState.textContent = 'DONE';
+  typing = false;
+}
 
-    // Output data for each scan
-    const OUTPUTS = {
-      fork: {
-        steps: [
-          { delay: 300, text: '<span class="cmd">$ solforge fork devnet ERSbyEx6s4MJnAem1vjmZW8Wv2cQdx1U4Fytuo6qy8ro</span>' },
-          { delay: 600, text: '<span class="d">Connecting to https://api.devnet.solana.com...</span>' },
-          { delay: 400, text: '<span class="d">Fetching program accounts...</span>' },
-          { delay: 800, text: '<span class="g">&#10004;</span> Forked <span class="w">5 accounts</span> at slot <span class="w">455,258,642</span>' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '  <span class="d">Account 1:</span> <span class="w">Exchange</span>        <span class="d">232 bytes</span>' },
-          { delay: 100, text: '  <span class="d">Account 2:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
-          { delay: 100, text: '  <span class="d">Account 3:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
-          { delay: 100, text: '  <span class="d">Account 4:</span> <span class="w">TradingPair</span>    <span class="d">284 bytes</span>' },
-          { delay: 100, text: '  <span class="d">Account 5:</span> <span class="w">DataProvider</span>   <span class="d">196 bytes</span>' },
-          { delay: 200, text: '' },
-          { delay: 300, text: '  <span class="d">Snapshot saved:</span> <span class="g">.solforge/fork_ERSbyEx6_455258642.json</span>' },
-        ],
-        progress: [
-          { pct: 20, label: 'Connecting to RPC...' },
-          { pct: 50, label: 'Fetching accounts...' },
-          { pct: 80, label: 'Parsing account data...' },
-          { pct: 100, label: 'Snapshot saved' },
-        ],
-        status: 'pass',
-        statusText: 'DONE',
-        meta: '5 accounts / slot 455M',
-      },
-      security: {
-        steps: [
-          { delay: 300, text: '<span class="cmd">$ solforge security forexforsoul.json</span>' },
-          { delay: 500, text: '<span class="d">Loading IDL...</span>' },
-          { delay: 300, text: '<span class="g">&#10004;</span> IDL loaded: <span class="w">forexforsoul</span> | <span class="w">8</span> instructions' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
-          { delay: 100, text: '  <span class="w">Security Report: forexforsoul</span>' },
-          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '  <span class="r">3</span> critical  <span class="r">0</span> high  <span class="y">0</span> medium  <span class="d">0</span> low' },
-          { delay: 200, text: '' },
-          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
-          { delay: 100, text: '  Account "authority" looks like an authority but is not a signer' },
-          { delay: 100, text: '  <span class="d">instruction:</span> add_trading_pair  <span class="d">account:</span> authority' },
-          { delay: 200, text: '' },
-          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
-          { delay: 100, text: '  Account "authority" is not a signer' },
-          { delay: 100, text: '  <span class="d">instruction:</span> initialize_exchange  <span class="d">account:</span> authority' },
-          { delay: 200, text: '' },
-          { delay: 300, text: '  <span class="bg-r">CRITICAL</span> <span class="w">missing-signer</span>' },
-          { delay: 100, text: '  Account "authority" is not a signer' },
-          { delay: 100, text: '  <span class="d">instruction:</span> update_price  <span class="d">account:</span> authority' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
-          { delay: 100, text: '  <span class="w">Check Summary</span>' },
-          { delay: 100, text: '' },
-          { delay: 150, text: '  <span class="bg-r">FAIL</span>  missing-signer        <span class="d">&#8212; 3 issue(s)</span>' },
-          { delay: 150, text: '  <span class="bg-g">PASS</span>  unchecked-owner' },
-          { delay: 150, text: '  <span class="bg-g">PASS</span>  arithmetic-overflow' },
-          { delay: 150, text: '  <span class="bg-g">PASS</span>  reinitialization' },
-          { delay: 150, text: '  <span class="bg-g">PASS</span>  cpi-authority' },
-          { delay: 150, text: '  <span class="bg-g">PASS</span>  rent-exemption' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
-          { delay: 200, text: '  <span class="r">1 failed</span><span class="d">, 5 passed, 6 total</span>' },
-        ],
-        progress: [
-          { pct: 15, label: 'Loading IDL...' },
-          { pct: 30, label: 'Checking signers...' },
-          { pct: 50, label: 'Checking account owners...' },
-          { pct: 65, label: 'Checking arithmetic...' },
-          { pct: 80, label: 'Checking CPI authority...' },
-          { pct: 95, label: 'Generating report...' },
-          { pct: 100, label: 'Scan complete' },
-        ],
-        status: 'fail',
-        statusText: '3 CRITICAL',
-        meta: '5 pass / 1 fail',
-      },
-      fuzz: {
-        steps: [
-          { delay: 300, text: '<span class="cmd">$ solforge fuzz forexforsoul.json --iterations 1000</span>' },
-          { delay: 500, text: '<span class="d">Loading IDL and generating test inputs...</span>' },
-          { delay: 400, text: '' },
-          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
-          { delay: 100, text: '  <span class="w">Fuzz Results</span>' },
-          { delay: 100, text: '<span class="w">&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;</span>' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '  Iterations:  <span class="w">1,000</span>' },
-          { delay: 100, text: '  Passed:      <span class="g">975</span>' },
-          { delay: 100, text: '  Crashes:     <span class="r">25</span>' },
-          { delay: 100, text: '  Timeouts:    <span class="d">0</span>' },
-          { delay: 100, text: '  Findings:    <span class="y">32</span>' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '<span class="d">&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;</span>' },
-          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 20: Max value for "shares" in withdraw_liquidity <span class="d">&#8212; overflow</span>' },
-          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 44: Negative "size" in open_position <span class="d">&#8212; underflow</span>' },
-          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 58: Max value for "price" in update_price <span class="d">&#8212; overflow</span>' },
-          { delay: 200, text: '  <span class="bg-y">WARN</span>  iter 216: Zero "amount" in deposit_liquidity <span class="d">&#8212; div by zero</span>' },
-          { delay: 200, text: '  <span class="bg-r">FAIL</span>  iter 319: Max value for "size" in open_position <span class="d">&#8212; overflow</span>' },
-          { delay: 150, text: '  <span class="d">... and 27 more findings</span>' },
-          { delay: 200, text: '' },
-          { delay: 100, text: '  <span class="r">25 crash(es)</span><span class="d">,</span> <span class="y">32 finding(s)</span>' },
-        ],
-        progress: [
-          { pct: 10, label: 'Generating inputs... (0/1000)' },
-          { pct: 25, label: 'Fuzzing... (250/1000)' },
-          { pct: 50, label: 'Fuzzing... (500/1000)' },
-          { pct: 75, label: 'Fuzzing... (750/1000)' },
-          { pct: 90, label: 'Analyzing crashes...' },
-          { pct: 100, label: '1000 iterations complete' },
-        ],
-        status: 'warn',
-        statusText: '25 CRASHES',
-        meta: '975 pass / 25 crash / 32 findings',
-      },
-    };
+async function runAll(){
+  if (typing) return;
+  const seq = ['fork','security','fuzz'];
+  for (const s of seq){
+    document.querySelectorAll('.forge-tab').forEach(t=>{
+      t.classList.toggle('active', t.dataset.tab === s);
+    });
+    stageLabel.textContent = stages[s].label;
+    currentTab = s;
+    await runStage(s);
+    await new Promise(r=>setTimeout(r, 500));
+  }
+}
 
-    let scanning = false;
+/* ==================== SPARKS ==================== */
+const sparksEl = document.getElementById('sparks');
+function burstSparks(){
+  if (!sparksEl) return;
+  const rect = sparksEl.getBoundingClientRect();
+  const cx = rect.width / 2;
+  const cy = 40;
+  for (let i=0; i<14; i++){
+    const s = document.createElement('div');
+    s.className = 'spark';
+    s.style.left = cx + 'px';
+    s.style.top = cy + 'px';
+    const angle = (Math.PI * 2) * (i/14) + Math.random()*0.5;
+    const dist = 60 + Math.random()*140;
+    s.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
+    s.style.setProperty('--dy', Math.abs(Math.sin(angle)*dist) + Math.random()*40 + 'px');
+    sparksEl.appendChild(s);
+    requestAnimationFrame(()=>s.classList.add('go'));
+    setTimeout(()=>s.remove(), 1100);
+  }
+}
 
-    function togglePanel(name) {
-      if (scanning) return;
-      const panel = document.getElementById('panel-' + name);
-      panel.classList.toggle('active');
+/* ==================== AUTO-IGNITE HEAT ON SCROLL ==================== */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if (e.isIntersecting){
+      igniteHeat();
+      io.disconnect();
     }
+  });
+}, { threshold: 0.35 });
+io.observe(document.querySelector('.heat-wrap'));
 
-    async function runScan(name) {
-      const data = OUTPUTS[name];
-      const panel = document.getElementById('panel-' + name);
-      const term = document.getElementById('term-' + name);
-      const status = document.getElementById('status-' + name);
-      const meta = document.getElementById('meta-' + name);
-      const progressEl = document.getElementById('progress-' + name);
-      const fill = document.getElementById('fill-' + name);
-      const plabel = document.getElementById('plabel-' + name);
-
-      // reset
-      term.innerHTML = '';
-      panel.classList.add('active');
-      status.className = 'result-status idle';
-      status.textContent = 'SCANNING';
-      progressEl.classList.add('visible');
-
-      // progress animation
-      for (const p of data.progress) {
-        await sleep(400);
-        fill.style.width = p.pct + '%';
-        plabel.textContent = p.label;
-      }
-
-      await sleep(300);
-      progressEl.classList.remove('visible');
-
-      // type output
-      for (const step of data.steps) {
-        await sleep(step.delay);
-        if (step.text === '') {
-          term.innerHTML += '<br>';
-        } else {
-          term.innerHTML += step.text + '<br>';
-        }
-        term.scrollTop = term.scrollHeight;
-      }
-
-      // final status
-      status.className = 'result-status ' + data.status;
-      status.textContent = data.statusText;
-      meta.textContent = data.meta;
+/* ==================== SCROLL REVEAL ==================== */
+document.querySelectorAll('.step, .bom-row, .spec, .plate-step, .section-head, .section-title, .compare, .forge-deck, .heat-wrap').forEach((el,i)=>{
+  if (!el.classList.contains('section-title')) el.classList.add('reveal');
+  if (el.classList.contains('bom-row')) el.classList.add('d'+Math.min(i%7+1,7));
+  if (el.classList.contains('step')) el.classList.add('d'+((i%3)+1));
+  if (el.classList.contains('spec')) el.classList.add('d'+((i%4)+1));
+  if (el.classList.contains('plate-step')) el.classList.add('d'+((i%4)+1));
+});
+const revealIO = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if (e.isIntersecting){
+      e.target.classList.add('in');
+      revealIO.unobserve(e.target);
     }
+  });
+}, { threshold: 0.12, rootMargin:'0px 0px -60px 0px' });
+document.querySelectorAll('.reveal, .section-title').forEach(el=>revealIO.observe(el));
 
-    async function runAllScans() {
-      if (scanning) return;
-      scanning = true;
-      const btn = document.getElementById('runAllBtn');
-      btn.classList.add('active');
-      btn.textContent = 'Scanning...';
-
-      await runScan('fork');
-      await sleep(500);
-      await runScan('security');
-      await sleep(500);
-      await runScan('fuzz');
-
-      btn.classList.remove('active');
-      btn.textContent = 'Run All Scans';
-      scanning = false;
+/* ==================== COUNT UP NUMBERS ==================== */
+function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+const countIO = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseFloat(el.dataset.count);
+    const dur = 1400;
+    const commas = el.dataset.commas === '1';
+    const pad = el.dataset.pad ? parseInt(el.dataset.pad) : 0;
+    const pre = el.dataset.prefix || '';
+    const suf = el.dataset.suffix || '';
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now - start) / dur);
+      let v = Math.round(target * easeOut(p));
+      let s = commas ? v.toLocaleString() : String(v);
+      if (pad) s = s.padStart(pad, '0');
+      el.textContent = pre + s + suf;
+      if (p < 1) requestAnimationFrame(tick);
     }
+    requestAnimationFrame(tick);
+    countIO.unobserve(el);
+  });
+}, { threshold: 0.4 });
+document.querySelectorAll('.spec-v .n').forEach(el=>countIO.observe(el));
 
-    function sleep(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
-  </script>
+/* ==================== STEP MOUSE PARALLAX ==================== */
+document.querySelectorAll('.step').forEach(step=>{
+  step.addEventListener('mousemove', e=>{
+    const r = step.getBoundingClientRect();
+    step.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+    step.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+});
+
+/* ==================== BLUEPRINT MOUSE PARALLAX ==================== */
+const bpWrap = document.querySelector('.hero-right');
+const bp = document.querySelector('.blueprint');
+if (bpWrap && bp){
+  bpWrap.addEventListener('mousemove', e=>{
+    const r = bpWrap.getBoundingClientRect();
+    const dx = (e.clientX - r.left - r.width/2) / r.width;
+    const dy = (e.clientY - r.top - r.height/2) / r.height;
+    bp.style.transform = `perspective(800px) rotateY(${dx*6}deg) rotateX(${-dy*6}deg) translateZ(0)`;
+  });
+  bpWrap.addEventListener('mouseleave', ()=>{
+    bp.style.transform = '';
+  });
+  bp.style.transition = 'transform .25s ease-out';
+}
+
+/* ==================== TRAILING CURSOR PARTICLES ==================== */
+let lastTrail = 0;
+document.addEventListener('mousemove', e=>{
+  const now = performance.now();
+  if (now - lastTrail < 80) return;
+  lastTrail = now;
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;width:4px;height:4px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:opacity .5s,transform .5s;opacity:.7`;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>{
+    t.style.opacity = '0';
+    t.style.transform = `translate(-50%,-50%) scale(.2)`;
+  });
+  setTimeout(()=>t.remove(), 520);
+});
+
+/* ==================== NAV ON-SCROLL TINT ==================== */
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', ()=>{
+  nav.style.borderBottomColor = window.scrollY > 10 ? 'var(--forge)' : 'var(--line)';
+  nav.style.boxShadow = window.scrollY > 10 ? '0 1px 30px rgba(255,138,61,.15)' : 'none';
+}, { passive:true });
+
+/* ==================== HEATMAP CELL HOVER TOOLTIP ==================== */
+document.querySelectorAll('.heat-cell').forEach((cell,i)=>{
+  cell.title = `iter #${i.toString().padStart(3,'0')}`;
+});
+</script>
 </body>
 </html>
