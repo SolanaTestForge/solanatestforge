@@ -1,16 +1,38 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "es2021",
+    "lib": ["es2021"],
     "module": "commonjs",
+    "moduleResolution": "node",
+
     "outDir": "./dist",
     "rootDir": "./src",
+    "baseUrl": "./src",
+
     "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    "skipLibCheck": true,
+
     "declaration": true,
-    "sourceMap": true
+    "declarationMap": false,
+    "sourceMap": true,
+    "removeComments": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo"
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/__fixtures__",
+    "src/**/__tests__"
+  ]
 }
