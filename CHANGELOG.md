@@ -2,6 +2,17 @@
 
 All notable changes to `solanatestforge` cli.
 
+## [0.1.1] — docs + golden snapshots
+
+### Added
+- `[docs]` `solforge.toml` configuration examples doc — disable + severity + fork + fuzz
+- `[test]` golden snapshot for analyze command with 4 violations across 7 rules
+- `[docs]` CI install snippet for GitHub Actions
+- `[docs]` rules reference table with severity ramps + per-rule `.solforge.toml` snippets
+
+### Notes
+- BOM-style table format adopted for rule docs to match landing-page schematic
+
 ## [0.1.0] — first npm publish
 
 ### Added
