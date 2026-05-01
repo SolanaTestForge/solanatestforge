@@ -1,0 +1,19 @@
+[package]
+name = "vault_unsafe"
+version = "0.0.1"
+description = "Anchor fixture intentionally violating STF-001, STF-002, STF-003 — used by the security-rule snapshot tests."
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "vault_unsafe"
+
+[dependencies]
+anchor-lang = "0.30.1"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
