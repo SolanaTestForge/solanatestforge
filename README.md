@@ -5,7 +5,24 @@ Test framework for Solana programs with forked state, security analysis, and fuz
 ## Getting Started
 
 ```bash
-npm install -g solana-test-forge
+npm install -g solanatestforge
+```
+
+### CI integration
+
+Run the security pass on every PR — fails the build on `high`+ findings, JSON output for parsers:
+
+```yaml
+# .github/workflows/security.yml
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install -g solanatestforge
+      - run: solforge security ./programs --json --fail-on high
 ```
 
 ## Commands
