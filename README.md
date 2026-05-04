@@ -131,4 +131,8 @@ node dist/index.js security ./target/idl/my_program.json
 
 ## License
 
-MIT
+MIT — see [repo-license] for the source tree, [pkg-license] for the published CLI. Both files carry the same terms; copyright holder is `brockie69` (npm publisher).
+
+[repo-license]: ./LICENSE
+[pkg-license]: ./cli/LICENSE
+
