@@ -57,6 +57,14 @@ export async function securityCommand(programId: string) {
     console.log(chalk.green.bold('\n  All clear — no security issues detected!'));
   } else {
     const critCount = issues.filter((i: any) => i.severity === 'critical').length;
+    const highCount = issues.filter((i: any) => i.severity === 'high').length;
+    const medCount  = issues.filter((i: any) => i.severity === 'medium').length;
+    const lowCount  = issues.filter((i: any) => i.severity === 'low').length;
+    console.log('');
+    if (critCount > 0) console.log(chalk.red.bold(`  ${critCount} critical`));
+    if (highCount > 0) console.log(chalk.red(`  ${highCount} high`));
+    if (medCount  > 0) console.log(chalk.yellow(`  ${medCount} medium`));
+    if (lowCount  > 0) console.log(chalk.gray(`  ${lowCount} low`));
     if (critCount > 0) {
       console.log(chalk.red.bold(`\n  ${critCount} CRITICAL issue(s) require immediate attention.`));
     }
