@@ -2,6 +2,12 @@
 
 Test framework for Solana programs with forked state, security analysis, and fuzzing.
 
+[npm][npm-link] · [landing][landing-link] · [`v0.1.0`][changelog]
+
+[npm-link]: https://www.npmjs.com/package/solanatestforge
+[landing-link]: https://solanatestforge.vercel.app
+[changelog]: ./CHANGELOG.md
+
 ## Getting Started
 
 ```bash
