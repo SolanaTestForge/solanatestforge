@@ -33,10 +33,16 @@ export async function securityCommand(programId: string) {
   }
 
   if (!idl) {
-    spin.fail('No IDL found');
-    console.log(chalk.gray(`Searched: ${idlPaths.join(', ')}`));
+    spin.fail(`No IDL found for "${programId}"`);
+    console.log(chalk.gray(`Looked in:`));
+    for (const p of idlPaths) {
+      const exists = fs.existsSync(p) ? chalk.yellow('exists, but failed to parse') : chalk.gray('not found');
+      console.log(`  ${chalk.gray('·')} ${p}  ${exists}`);
+    }
     console.log(`\nUsage: ${chalk.bold('solforge security <path-to-idl.json>')}`);
-    console.log(`       ${chalk.bold('solforge security <program-name>')}  (from anchor project)`);
+    console.log(`       ${chalk.bold('solforge security <program-name>')}  (from an anchor project root)`);
+    console.log(chalk.gray(`\nIf the IDL lives elsewhere, pass the absolute path directly.`));
+    process.exitCode = 2;
     return;
   }
 
