@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <pattern id="bp" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#152a40" stroke-width="0.7"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="#0c1824"/>
+  <rect width="1200" height="630" fill="url(#bp)"/>
+  <g stroke="#1e3c5c" stroke-width="1">
+    <line x1="60" y1="60" x2="1140" y2="60"/>
+    <line x1="60" y1="570" x2="1140" y2="570"/>
+    <line x1="60" y1="60" x2="60" y2="570"/>
+    <line x1="1140" y1="60" x2="1140" y2="570"/>
+  </g>
+  <g font-family="monospace" fill="#49d4ff">
+    <text x="80" y="100" font-size="14" letter-spacing="4">[BLUEPRINT 0001] · TEST FRAMEWORK FOR ANCHOR</text>
+  </g>
+  <text x="80" y="220" font-family="monospace" font-size="80" font-weight="700" fill="#dce8f3" letter-spacing="-1">SolanaTestForge</text>
+  <text x="80" y="280" font-family="monospace" font-size="28" fill="#8aa0b8">Forked state · security checks · fuzz harness.</text>
+  <g transform="translate(80,330)" font-family="monospace" font-size="20">
+    <text x="0" y="0" fill="#5af2a8">✓</text>
+    <text x="32" y="0" fill="#dce8f3">signer-check</text>
+    <text x="220" y="0" fill="#8aa0b8">17/17 passed</text>
+    <text x="0" y="36" fill="#5af2a8">✓</text>
+    <text x="32" y="36" fill="#dce8f3">arithmetic-overflow</text>
+    <text x="280" y="36" fill="#8aa0b8">9/9 passed</text>
+    <text x="0" y="72" fill="#ff5770">✗</text>
+    <text x="32" y="72" fill="#dce8f3">missing-rent-close</text>
+    <text x="280" y="72" fill="#ff5770">2 issues</text>
+    <text x="0" y="108" fill="#5af2a8">✓</text>
+    <text x="32" y="108" fill="#dce8f3">cpi-reentrancy</text>
+    <text x="220" y="108" fill="#8aa0b8">12/12 passed</text>
+    <text x="0" y="144" fill="#ffcc47">!</text>
+    <text x="32" y="144" fill="#dce8f3">discriminator-collision</text>
+    <text x="320" y="144" fill="#ffcc47">warn</text>
+  </g>
+  <g transform="translate(880,140)">
+    <rect x="0" y="0" width="220" height="120" fill="#0f2030" stroke="#1e3c5c"/>
+    <text x="20" y="36" font-family="monospace" font-size="13" fill="#8aa0b8" letter-spacing="3">BUILD STATUS</text>
+    <text x="20" y="80" font-family="monospace" font-size="42" font-weight="700" fill="#5af2a8">PASS</text>
+    <text x="20" y="105" font-family="monospace" font-size="12" fill="#5af2a8">38/40 · 2 warnings</text>
+    <rect x="0" y="140" width="220" height="120" fill="#0f2030" stroke="#1e3c5c"/>
+    <text x="20" y="176" font-family="monospace" font-size="13" fill="#8aa0b8" letter-spacing="3">FUZZ COVERAGE</text>
+    <text x="20" y="220" font-family="monospace" font-size="42" font-weight="700" fill="#ff8a3d">94.2%</text>
+    <text x="20" y="245" font-family="monospace" font-size="12" fill="#ff8a3d">10k iterations</text>
+  </g>
+  <g transform="translate(80,490)" font-family="monospace" font-size="16" fill="#dce8f3">
+    <text x="0" y="0" fill="#ff8a3d">$</text>
+    <text x="20" y="0">solforge test --security --fuzz</text>
+  </g>
+  <text x="1120" y="540" font-family="monospace" font-size="12" fill="#4a6178" text-anchor="end" letter-spacing="2">npm i -g solanatestforge · v0.1.0</text>
+</svg>
