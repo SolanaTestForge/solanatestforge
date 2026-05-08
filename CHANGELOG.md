@@ -2,26 +2,6 @@
 
 All notable changes to `solanatestforge` cli.
 
-## [0.1.2] — UX polish
-
-### Added
-- `[cli]` per-severity count chips in security summary (critical / high / medium / low)
-- `[cli]` actionable IDL-not-found error — shows every probed path and whether the file existed but failed to parse
-
-### Changed
-- `[cli]` security command now exits with code `2` when the IDL can't be located (was silently returning)
-
-## [0.1.1] — docs + golden snapshots
-
-### Added
-- `[docs]` `solforge.toml` configuration examples doc — disable + severity + fork + fuzz
-- `[test]` golden snapshot for analyze command with 4 violations across 7 rules
-- `[docs]` CI install snippet for GitHub Actions
-- `[docs]` rules reference table with severity ramps + per-rule `.solforge.toml` snippets
-
-### Notes
-- BOM-style table format adopted for rule docs to match landing-page schematic
-
 ## [0.1.0] — first npm publish
 
 ### Added

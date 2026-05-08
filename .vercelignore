@@ -1,9 +1,0 @@
-node_modules
-**/node_modules
-cli
-test
-docs
-**/dist
-**/target
-.DS_Store
-*.tsbuildinfo
