@@ -33,10 +33,16 @@ export async function securityCommand(programId: string) {
   }
 
   if (!idl) {
-    spin.fail('No IDL found');
-    console.log(chalk.gray(`Searched: ${idlPaths.join(', ')}`));
+    spin.fail(`No IDL found for "${programId}"`);
+    console.log(chalk.gray(`Looked in:`));
+    for (const p of idlPaths) {
+      const exists = fs.existsSync(p) ? chalk.yellow('exists, but failed to parse') : chalk.gray('not found');
+      console.log(`  ${chalk.gray('·')} ${p}  ${exists}`);
+    }
     console.log(`\nUsage: ${chalk.bold('solforge security <path-to-idl.json>')}`);
-    console.log(`       ${chalk.bold('solforge security <program-name>')}  (from anchor project)`);
+    console.log(`       ${chalk.bold('solforge security <program-name>')}  (from an anchor project root)`);
+    console.log(chalk.gray(`\nIf the IDL lives elsewhere, pass the absolute path directly.`));
+    process.exitCode = 2;
     return;
   }
 
@@ -51,6 +57,14 @@ export async function securityCommand(programId: string) {
     console.log(chalk.green.bold('\n  All clear — no security issues detected!'));
   } else {
     const critCount = issues.filter((i: any) => i.severity === 'critical').length;
+    const highCount = issues.filter((i: any) => i.severity === 'high').length;
+    const medCount  = issues.filter((i: any) => i.severity === 'medium').length;
+    const lowCount  = issues.filter((i: any) => i.severity === 'low').length;
+    console.log('');
+    if (critCount > 0) console.log(chalk.red.bold(`  ${critCount} critical`));
+    if (highCount > 0) console.log(chalk.red(`  ${highCount} high`));
+    if (medCount  > 0) console.log(chalk.yellow(`  ${medCount} medium`));
+    if (lowCount  > 0) console.log(chalk.gray(`  ${lowCount} low`));
     if (critCount > 0) {
       console.log(chalk.red.bold(`\n  ${critCount} CRITICAL issue(s) require immediate attention.`));
     }
