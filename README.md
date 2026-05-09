@@ -2,13 +2,7 @@
 
 Test framework for Solana programs with forked state, security analysis, and fuzzing.
 
-[npm][npm-link] · [landing][landing-link] · [`v0.1.0`][changelog]
-
-[npm-link]: https://www.npmjs.com/package/solanatestforge
-[landing-link]: https://solanatestforge.vercel.app
-[changelog]: ./CHANGELOG.md
-
-## Quickstart
+## Getting Started
 
 ```bash
 npm install -g solanatestforge
@@ -113,14 +107,14 @@ Run tests on forked state (requires local validator).
 | CPI authority | External program call without constraint | Medium |
 | Rent exemption | No close/delete for account cleanup | Low |
 
-## Build chain
+## Stack
 
 - TypeScript CLI (commander.js)
 - Fork engine (JSON-RPC snapshots)
 - IDL-based security analysis
 - Random + boundary value fuzzer
 
-## Contributing
+## Dev
 
 ```bash
 cd cli
@@ -131,8 +125,4 @@ node dist/index.js security ./target/idl/my_program.json
 
 ## License
 
-MIT — see [repo-license] for the source tree, [pkg-license] for the published CLI. Both files carry the same terms; copyright holder is `brockie69` (npm publisher).
-
-[repo-license]: ./LICENSE
-[pkg-license]: ./cli/LICENSE
-
+MIT

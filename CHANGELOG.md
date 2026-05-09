@@ -2,15 +2,6 @@
 
 All notable changes to `solanatestforge` cli.
 
-## [0.1.2] — UX polish
-
-### Added
-- `[cli]` per-severity count chips in security summary (critical / high / medium / low)
-- `[cli]` actionable IDL-not-found error — shows every probed path and whether the file existed but failed to parse
-
-### Changed
-- `[cli]` security command now exits with code `2` when the IDL can't be located (was silently returning)
-
 ## [0.1.1] — docs + golden snapshots
 
 ### Added
